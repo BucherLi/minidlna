@@ -898,6 +898,10 @@ GetVideoMetadata(const char *path, char *name)
 			xasprintf(&m.mime, "video/x-matroska");
 		else if( strcmp(ctx->iformat->name, "flv") == 0 )
 			xasprintf(&m.mime, "video/x-flv");
+#ifdef BAIDU_DMS_OPT
+                else if( strcmp(ctx->iformat->name, "rm") == 0 )
+                        xasprintf(&m.mime, "video/x-pn-realvideo");
+#endif
 		if( m.mime )
 			goto video_no_dlna;
 
@@ -1573,6 +1577,10 @@ video_no_dlna:
 			xasprintf(&m.mime, "video/x-matroska");
 		else if( strcmp(ctx->iformat->name, "flv") == 0 )
 			xasprintf(&m.mime, "video/x-flv");
+#ifdef BAIDU_DMS_OPT
+                else if( strcmp(ctx->iformat->name, "rm") == 0 )
+                        xasprintf(&m.mime, "video/x-pn-realvideo");
+#endif
 		else
 			DPRINTF(E_WARN, L_METADATA, "%s: Unhandled format: %s\n", path, ctx->iformat->name);
 	}

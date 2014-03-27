@@ -163,6 +163,7 @@
 	"http-get:*:video/x-ms-wmv:*," \
 	"http-get:*:video/x-msvideo:*," \
 	"http-get:*:video/x-flv:*," \
+        "http-get:*:video/x-pn-realvideo:*," \
 	"http-get:*:video/x-tivo-mpeg:*," \
 	"http-get:*:video/quicktime:*," \
 	"http-get:*:audio/mp4:*," \

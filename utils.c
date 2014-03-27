@@ -364,7 +364,15 @@ mime_to_ext(const char * mime)
 				return "mkv";
 			else if( strcmp(mime+6, "x-flv") == 0 )
 				return "flv";
-			else if( strcmp(mime+6, "vnd.dlna.mpeg-tts") == 0 )
+#ifdef BAIDU_DMS_OPT
+                        else if( strcmp(mime+6, "x-pn-realvideo") == 0)
+                            return "rm";
+                        else if( strcmp(mime+6, "x-rm") == 0 )
+                            return "rm";
+                        else if( strcmp(mime+6, "x-rmvb") == 0 )
+                            return "rmvb";
+#endif
+                        else if( strcmp(mime+6, "vnd.dlna.mpeg-tts") == 0 )
 				return "mpg";
 			else if( strcmp(mime+6, "quicktime") == 0 )
 				return "mov";
@@ -396,6 +404,9 @@ is_video(const char * file)
 		ends_with(file, ".m2t") || ends_with(file, ".mkv")   ||
 		ends_with(file, ".vob") || ends_with(file, ".ts")    ||
 		ends_with(file, ".flv") || ends_with(file, ".xvid")  ||
+#ifdef BAIDU_DMS_OPT
+                ends_with(file, ".rm")  || ends_with(file, ".rmvb")  ||
+#endif
 #ifdef TIVO_SUPPORT
 		ends_with(file, ".TiVo") ||
 #endif
