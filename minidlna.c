@@ -1163,7 +1163,11 @@ main(int argc, char **argv)
 		i = 0;	/* active HTTP connections count */
 		for (e = upnphttphead.lh_first; e != NULL; e = e->entries.le_next)
 		{
+#ifdef XIAODU_NAS
+			if ((e->socket >= 0) && (e->state <= 3))
+#else
 			if ((e->socket >= 0) && (e->state <= 2))
+#endif
 			{
 				FD_SET(e->socket, &readset);
 				max_fd = MAX(max_fd, e->socket);
@@ -1219,7 +1223,11 @@ main(int argc, char **argv)
 		/* process active HTTP connections */
 		for (e = upnphttphead.lh_first; e != NULL; e = e->entries.le_next)
 		{
+#ifdef XIAODU_NAS
+			if ((e->socket >= 0) && (e->state <= 3) && (FD_ISSET(e->socket, &readset)))
+#else
 			if ((e->socket >= 0) && (e->state <= 2) && (FD_ISSET(e->socket, &readset)))
+#endif
 				Process_upnphttp(e);
 		}
 		/* process incoming HTTP connections */

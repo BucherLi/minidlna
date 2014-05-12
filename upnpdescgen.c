@@ -314,6 +314,32 @@ static const struct argument SearchArgs[] =
 	{0, 0}
 };
 
+#ifdef XIAODU_NAS
+static const struct argument CreateItemArgs[] =
+{
+		{"ContainerID", 1, 1},
+		{"Elements", 1, 2},
+		{"ObjectID", 2, 0},
+		{"Result", 2, 2},
+		{0, 0}
+};
+
+static const struct argument UpdateItemArgs[] =
+{
+		{"ObjectID", 1, 0},
+		{"CurrentTagValue", 1, 13},
+		{"NewTagValue", 1, 13},
+		{0, 0}
+};
+
+static const struct argument DeleteItemArgs[] =
+{
+		{"ObjectID", 1, 0},
+		{0, 0}
+};
+
+#endif
+
 static const struct action ContentDirectoryActions[] =
 {
 	{"GetSearchCapabilities", GetSearchCapabilitiesArgs}, /* R */
@@ -321,6 +347,11 @@ static const struct action ContentDirectoryActions[] =
 	{"GetSystemUpdateID", GetSystemUpdateIDArgs}, /* R */
 	{"Browse", BrowseArgs}, /* R */
 	{"Search", SearchArgs}, /* O */
+#ifdef XIAODU_NAS
+	{"CreateObject", CreateItemArgs}, /* O */
+	{"UpdateObject", UpdateItemArgs}, /* O */
+	{"DestroyObject", DeleteItemArgs}, /* O */
+#endif
 #if 0 // Not implementing optional features yet...
 	{"CreateObject", CreateObjectArgs}, /* O */
 	{"DestroyObject", DestroyObjectArgs}, /* O */
@@ -351,6 +382,9 @@ static const struct stateVar ContentDirectoryVars[] =
 	{"SearchCapabilities", 0, 0},
 	{"SortCapabilities", 0, 0},
 	{"SystemUpdateID", 3|EVENTED, 0, 0, 255},
+#ifdef XIAODU_NAS
+	{"A_ARG_TYPE_TagValueList", 0, 0},
+#endif
 	{0, 0}
 };
 

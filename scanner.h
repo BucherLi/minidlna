@@ -57,6 +57,11 @@
 #define IMAGE_DIR_ID		"3$16"
 #define IMAGE_RATING_ID		"3$300"
 
+#ifdef XIAODU_NAS
+#define OTHER_ID        "4"
+#define OTHER_ALL_ID		"4$1"
+#endif
+
 extern int valid_cache;
 
 int

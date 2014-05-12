@@ -483,6 +483,15 @@ insert_file(char *name, const char *path, const char *parentID, int object)
 		strcpy(class, "item.audioItem.musicTrack");
 		detailID = GetAudioMetadata(path, name);
 	}
+#ifdef XIAODU_NAS
+	if( !detailID)
+	{
+		strcpy(class, "item.otherItem");
+		detailID = GetOtherMetadata(path, name);
+		//if( !detailID )
+		//	strcpy(name, orig_name);
+	}
+#endif
 	free(orig_name);
 	if( !detailID )
 	{
@@ -689,6 +698,24 @@ filter_avp(scan_filter *d)
 	       );
 }
 
+#ifdef XIAODU_NAS
+static int
+filter_dots(scan_filter *d)
+{
+	return ( (d->d_name[0] == '.') &&
+			 ( ( d->d_name[1] == '\0') || (d->d_name[1] == '.') )
+		   )? 0 : 1;
+}
+
+static int
+filter_o(scan_filter *d)
+{
+	return ( filter_dots(d) ||
+			!filter_avp(d)
+		   );
+}
+#endif
+
 static void
 ScanDirectory(const char *dir, const char *parent, media_types dir_types)
 {
@@ -723,6 +750,14 @@ ScanDirectory(const char *dir, const char *parent, media_types dir_types)
 		case TYPE_IMAGES:
 			n = scandir(dir, &namelist, filter_p, alphasort);
 			break;
+#ifdef XIAODU_NAS
+		case TYPE_OTHER:
+			n = scandir(dir, &namelist, filter_o, alphasort);
+			break;
+		case ALL_FILE:
+			n = scandir(dir, &namelist, filter_dots, alphasort);
+			break;
+#endif
 		default:
 			n = -1;
 			break;

@@ -1740,6 +1740,390 @@ search_error:
 	free(str.data);
 }
 
+static void
+CreateObject(struct upnphttp * h, const char * action)
+{
+    static const char resp0[] =
+    "<u:CreateObjectResponse "
+    "xmlns:u=\"urn:schemas-upnp-org:service:ContentDirectory:1\">"
+    "<Result>"
+    "&lt;DIDL-Lite"
+    CONTENT_DIRECTORY_SCHEMAS
+    "&gt;";
+
+    struct Response args;
+    struct string_s str;
+    int ret;
+    char *ContainerID, *Title, *UpnpClass, CompletePath[1024], *PATH = NULL;
+    struct NameValueParserData data;
+
+    memset(&args, 0, sizeof(args));
+    memset(&str, 0, sizeof(str));
+
+    ParseNameValue(h->req_buf + h->req_contentoff, h->req_contentlen, &data, 0);
+    //UnescapeStr = unescape_tag(h->req_buf + h->req_contentoff, h->req_contentlen, 0);
+    //UnescapeStr = unescape_tag(h->req_buf + h->req_contentoff, 1);
+    //DPRINTF(E_DEBUG, L_HTTP, "CreateObject with UnescapeStr: %s\n", UnescapeStr);
+    //ParseNameValue(UnescapeStr, strlen(UnescapeStr), &data, 0);
+    //ParseNameValue(h->req_buf + h->req_contentoff, h->req_contentlen, &data, 0);
+    ContainerID = GetValueFromNameValueList(&data, "ContainerID");
+    //DPRINTF(E_DEBUG, L_HTTP, "CreateObject with ContainerID: %s\n", ContainerID);
+    Title = GetValueFromNameValueList(&data, "Title");
+    UpnpClass = GetValueFromNameValueList(&data, "Class");
+    //DPRINTF(E_DEBUG, L_HTTP, "title is %s, upnp class is %s\n", Title, UpnpClass);
+
+    DPRINTF(E_DEBUG, L_HTTP, "CreateObject:\n"
+    	                         " * ContainerID: %s\n"
+    	                         " * Title: %d\n"
+    	                         " * UpnpClass: %d\n",
+    				ContainerID, Title, UpnpClass);
+
+    if(!ContainerID || !Title || !UpnpClass) {
+		SoapError(h, 402, "Invalid Args");
+		goto create_error;
+    }
+
+    str.size = DEFAULT_RESP_SIZE;
+    str.data = malloc(DEFAULT_RESP_SIZE);
+    str.off = sprintf(str.data, "%s", resp0);
+
+    //free(UnescapeStr);
+
+    if (strcmp(ContainerID, "64") == 0) {
+        PATH = sql_get_text_field(db, "select PATH from DETAILS where PATH IS NOT NULL LIMIT 1");
+    }
+    else {
+        PATH = sql_get_text_field(db, "select PATH from DETAILS where ID = (select DETAIL_ID from OBJECTS where OBJECT_ID = '%q')", ContainerID);
+    }
+
+    if (PATH == NULL) {
+        DPRINTF(E_WARN, L_HTTP, "OjbectId %s can't be located\n", ContainerID);
+        SoapError(h, 710, "No such container");
+        goto create_error;
+    }
+    DPRINTF(E_DEBUG, L_HTTP, "OjbectId is %s, PATH is %s\n", ContainerID, PATH);
+    strcpy(CompletePath, PATH);
+    strcat(CompletePath, "/");
+    strcat(CompletePath, Title);
+
+    char * firstIndex = strchr(ContainerID, '$');
+    char parentID[64], objectID[64];
+    int beginningId;
+    if (firstIndex == NULL) {
+        parentID[0] = '\0';
+    } else {
+        strcpy(parentID, firstIndex);
+    }
+    beginningId = get_next_available_id("OBJECTS", ContainerID);
+    sprintf(objectID, "%s$%X", ContainerID, beginningId);
+
+    if(!strncmp(UpnpClass, "object.container", strlen("object.container")))
+    {
+        if (mkdir(CompletePath, 0777) != 0) {
+            DPRINTF(E_ERROR, L_HTTP, "create directory %s fail\n", CompletePath);
+            SoapError(h, 501, "Action Failed");
+            goto create_error;
+        }
+    }
+    else
+    {
+        //char importUri[1024];
+        //sprintf(importUri, "http://%s", )
+        ret = strcatf(&str, "&amp;lt;item id=\"%s\" parentID=\"%s\" restricted=\"%s\"&amp;gt;"
+                      //"&amp;lt;upnp:storageMedium&amp;gt;%s&amp;lt;/upnp:storageMedium&amp;gt;"
+                      //"&amp;lt;upnp:writeStatus&amp;gt;%s&amp;lt;/upnp:writeStatus&amp;gt;"
+                      //"&amp;lt;res importUri=\“%s\” protocolInfo=\”%s\”/&amp;gt;"
+                      "&amp;lt;dc:title&amp;gt;%s&amp;lt;/dc:title&amp;gt;"
+                      "&amp;lt;upnp:class&amp;gt;%s&amp;lt;/upnp:class&amp;gt;"
+                      "&amp;lt;/item&amp;gt;",
+                      objectID, ContainerID, "false", Title, UpnpClass);
+    }
+
+    ret = strcatf(&str, "&lt;/DIDL-Lite&gt;</Result>\n"
+                  "<ObjectID>%s</ObjectID>\n"
+                  "</u:CreateObjectResponse>",
+                  objectID);
+    BuildSendAndCloseSoapResp(h, str.data, str.off);
+
+create_error:
+    sqlite3_free(PATH);
+    ClearNameValueList(&data);
+}
+
+#define UPDATEOBJECT_COPY_METHOD		1
+#define UPDATEOBJECT_MOVE_METHOD		2
+#define UPDATEOBJECT_RENAME_METHOD		3
+
+static void
+UpdateObject(struct upnphttp * h, const char * action)
+{
+    static const char resp0[] =
+    "<u:UpdateObjectResponse "
+    "xmlns:u=\"urn:schemas-upnp-org:service:ContentDirectory:1\">"
+    "</u:UpdateObjectResponse>";
+
+    struct Response args;
+    struct stat st;
+    int ret, len, method, status;
+    char *Method, *ObjectID, *DETAIL_ID = NULL, *PATH = NULL, *NEW_PATH = NULL,
+    	 *seg_p, *parentPath, *OldTitle, *NewTitle, *NewContainerID, *UnescapeStr;
+    char newPath[1024], cmd[1024], tmp_dir[1024];
+    struct NameValueParserData data;
+
+    memset(&args, 0, sizeof(args));
+
+    ParseNameValue(h->req_buf + h->req_contentoff, h->req_contentlen, &data, 0);
+    //UnescapeStr = unescape_tag(h->req_buf + h->req_contentoff, h->req_contentlen, 0);
+    //UnescapeStr = unescape_tag(h->req_buf + h->req_contentoff, 0);
+    //ParseNameValue(UnescapeStr, strlen(UnescapeStr), &data, 0);
+
+	ObjectID = GetValueFromNameValueList(&data, "ObjectID");
+	OldTitle = GetValueFromNameValueList(&data, "OldTitle");
+	if(ObjectID == NULL || OldTitle == NULL){
+		DPRINTF(E_WARN, L_HTTP, "Invalid args\n");
+		Send400(h);
+		goto update_error;
+	}
+
+
+	if (strcmp(ObjectID, "64") == 0 || strcmp(ObjectID, "0") == 0) {
+		DPRINTF(E_WARN, L_HTTP, "ObjectID 64 and 0 forbiden to be oprated\n");
+		Send400(h);
+		goto update_error;
+	}
+
+	//PATH = sql_get_text_field(db, "select PATH from DETAILS where PATH IS NOT NULL LIMIT 1");
+	PATH = sql_get_text_field(db, "select PATH from DETAILS where ID = "
+   			"(select DETAIL_ID from OBJECTS where (OBJECT_ID = '%q' and TITLE = '%q'))", ObjectID, OldTitle);
+	if (PATH == NULL) {
+		DPRINTF(E_WARN, L_HTTP, "ObjectId %s and title %s can't be located\n", ObjectID, OldTitle);
+		Send400(h);
+		goto update_error;
+	}
+
+    Method = GetValueFromNameValueList(&data, "Method");
+    if(Method == NULL) {
+    	DPRINTF(E_WARN, L_HTTP, "Method %s can't be located\n", Method);
+    	Send400(h);
+    	goto update_error;
+    }
+    method = atoi(Method);
+    switch(method){
+    case UPDATEOBJECT_COPY_METHOD:
+    case UPDATEOBJECT_MOVE_METHOD:
+    	NewContainerID = GetValueFromNameValueList(&data, "NewContainerID");
+    	if(NewContainerID == NULL){
+    		DPRINTF(E_WARN, L_HTTP, "Invalid args\n");
+    		Send400(h);
+    		goto update_error;
+    	}
+    	DPRINTF(E_DEBUG, L_HTTP, "UpdateObject with ObjectID: %s, OldTitle: %s, NewContainerID: %s\n",
+    			ObjectID, OldTitle, NewContainerID);
+
+        if (strcmp(NewContainerID, "64") == 0 || strcmp(NewContainerID, "0") == 0) {
+            NEW_PATH = sql_get_text_field(db, "select PATH from DETAILS where PATH IS NOT NULL LIMIT 1");
+        }else{
+        	NEW_PATH = sql_get_text_field(db, "select PATH from DETAILS where ID = "
+           				"(select DETAIL_ID from OBJECTS where OBJECT_ID = '%q')", NewContainerID);
+        }
+        if (NEW_PATH == NULL) {
+        	DPRINTF(E_WARN, L_HTTP, "target container ID %s can't be located\n", NewContainerID);
+        	Send400(h);
+        	goto update_error;
+        }
+
+        snprintf(newPath, sizeof(newPath), "%s/%s", NEW_PATH, OldTitle);
+        DPRINTF(E_DEBUG, L_HTTP, "cp/mv %s to the target url %s\n", PATH, newPath);
+        DETAIL_ID = sql_get_text_field(db, "select ID from DETAILS where PATH = '%q'", newPath);
+        if(DETAIL_ID != NULL){
+        	DPRINTF(E_WARN, L_HTTP, "target url %s already exist\n", newPath);
+        	Send400(h);
+        	goto update_error;
+        }
+
+        if(method == UPDATEOBJECT_COPY_METHOD){
+        	snprintf(cmd, sizeof(cmd), "cp -rf %s %s", PATH, newPath);
+        }else{
+        	snprintf(cmd, sizeof(cmd), "mv -f %s %s", PATH, newPath);
+        }
+    	break;
+    case UPDATEOBJECT_RENAME_METHOD:
+    	NewTitle = GetValueFromNameValueList(&data, "NewTitle");
+    	if(NewTitle == NULL){
+    		DPRINTF(E_WARN, L_HTTP, "Invalid args\n");
+    		Send400(h);
+    		goto update_error;
+    	}
+    	DPRINTF(E_DEBUG, L_HTTP, "UpdateObject with ObjectID: %s, OldTitle: %s, NewTitle: %s\n",
+    			ObjectID, OldTitle, NewTitle);
+
+
+    	strcpy(tmp_dir, PATH);
+    	if((seg_p = strrchr(tmp_dir, '/')) == NULL){
+    		DPRINTF(E_WARN, L_HTTP, "PATH %s is a illegal path\n", PATH);
+    		Send400(h);
+    		goto update_error;
+    	}
+    	*seg_p = '\0';
+    	snprintf(newPath, sizeof(newPath), "%s/%s", tmp_dir, NewTitle);
+    	snprintf(cmd, sizeof(cmd), "mv %s %s", PATH, newPath);
+    	break;
+    default:
+    	DPRINTF(E_WARN, L_HTTP, "Method[%s] can not be recognized\n", Method);
+    	Send400(h);
+    	goto update_error;
+    }
+
+    status = system(cmd);
+    if(status == -1){
+    	DPRINTF(E_WARN, L_HTTP, "system cmd[%s] failed\n", cmd);
+    	Send400(h);
+    	goto update_error;
+    }else if(WIFEXITED(status)){
+    	if(WEXITSTATUS(status) == 0){
+    		DPRINTF(E_INFO, L_HTTP, "system cmd[%s] success\n", cmd);
+    	}else{
+    		DPRINTF(E_WARN, L_HTTP, "system cmd[%s] failed, errorcode = %d\n", cmd, WEXITSTATUS(status));
+    		Send400(h);
+    		goto update_error;
+    	}
+    }
+
+    //ObjectID = GetValueFromNameValueList(&data, "ObjectID");
+    //newContainerID = GetValueFromNameValueList(&data, "ContainerID");
+    //newTitle = GetValueFromNameValueList(&data, "Title");
+    // DPRINTF(E_DEBUG, L_HTTP, "UpdateObject with ObjectID: %s\n", ObjectID);
+
+    //PATH = sql_get_text_field(db, "select PATH from DETAILS where ID = (select DETAIL_ID from OBJECTS where OBJECT_ID = '%q')", ObjectID);
+
+    /*if (PATH == NULL ) {
+        DPRINTF(E_WARN, L_HTTP, "OjbectId %s can't be located\n", ObjectID);
+        Send400(h);
+        goto update_error;
+    }
+
+	if((ret = stat(PATH, &st)) != 0 )
+    {
+        DPRINTF(E_WARN, L_HTTP, "PATH %s can't be stat with error code %d\n", PATH, ret);
+        Send500(h);
+        goto update_error;
+    }
+
+    if(newContainerID == NULL || newTitle == NULL) {
+        DPRINTF(E_ERROR, L_HTTP, "can't parse the new title or new ContainerID");
+        Send400(h);
+        goto update_error;
+    }
+    parentPath = strrchr(PATH, '/');
+    if (parentPath) {
+        len = parentPath - PATH + 1;
+        strncpy(newPath, PATH, len);
+        strcat(newPath, newTitle);
+    } else {
+        strcpy(newPath, newTitle);
+    }
+
+	if( (ret = rename(PATH, newPath)) )
+	{
+		DPRINTF(E_ERROR, L_HTTP, "%s can't be renamed to %s with error %d\n", PATH, newTitle, ret);
+        Send500(h);
+        goto update_error;
+    }*/
+
+    BuildSendAndCloseSoapResp(h, resp0, strlen(resp0));
+
+update_error:
+    sqlite3_free(PATH);
+    sqlite3_free(NEW_PATH);
+    sqlite3_free(DETAIL_ID);
+    ClearNameValueList(&data);
+}
+
+static void
+DestroyObject(struct upnphttp * h, const char * action)
+{
+    static const char resp0[] =
+    "<u:DestroyObjectResponse "
+    "xmlns:u=\"urn:schemas-upnp-org:service:ContentDirectory:1\">"
+    "</u:DestroyObjectResponse>";
+
+    struct Response args;
+    struct stat st;
+    int ret;
+    char *ObjectID, *Class, *Title, *PATH;
+    struct NameValueParserData data;
+
+    memset(&args, 0, sizeof(args));
+
+    ParseNameValue(h->req_buf + h->req_contentoff, h->req_contentlen, &data, 0);
+    //ParseNameValue(h->req_buf + h->req_contentoff, h->req_contentlen, &data, 0);
+    ObjectID = GetValueFromNameValueList(&data, "ObjectID");
+    Class = GetValueFromNameValueList(&data, "Class");
+    Title = GetValueFromNameValueList(&data, "Title");
+    if(ObjectID == NULL || Class == NULL || Title == NULL){
+        DPRINTF(E_WARN, L_HTTP, "ObjectID[%s], Class[%s], Title[%s], input args miss\n", ObjectID, Class, Title);
+        SoapError(h, 401, "Invalid args");
+        goto destroy_error;
+    }
+
+    //DPRINTF(E_DEBUG, L_HTTP, "DestroyObject with ObjectID: %s\n", ObjectID);
+
+    DPRINTF(E_DEBUG, L_HTTP, "DestoryObject:\n"
+        	                         " * ObjectID: %s\n",
+        	                         ObjectID);
+
+    if (!ObjectID) {
+		SoapError(h, 402, "Invalid Args");
+		goto destroy_error;
+	}
+
+    PATH = sql_get_text_field(db, "select PATH from DETAILS where ID = (select DETAIL_ID from OBJECTS where "
+    		"(OBJECT_ID = '%q' and CLASS = '%q' and NAME = '%q'))", ObjectID, Class, Title);
+    if (PATH == NULL ) {
+        DPRINTF(E_WARN, L_HTTP, "OjbectId: %s Class: %s Title: %s can't be located\n", ObjectID, Class, Title);
+        SoapError(h, 701, "No such object");
+        goto destroy_error;
+    }
+
+	if((ret = stat(PATH, &st)) != 0 )
+    {
+        DPRINTF(E_WARN, L_HTTP, "PATH %s can't be stat with error code %d\n", PATH, ret);
+        SoapError(h, 701, "No such object");
+        goto destroy_error;
+    }
+
+	if( S_ISDIR(st.st_mode) )
+	{
+		//do other sql operations refer to inotify update
+        if ((ret = rmdir(PATH)) != 0) {
+            DPRINTF(E_ERROR, L_HTTP, "remove directory %s fail with error code %d\n", PATH, ret);
+            SoapError(h, 501, "Action Failed");
+            //Send500(h);
+            goto destroy_error;
+        }
+    }
+    else if( S_ISREG(st.st_mode) )
+    {
+        if ((ret = remove(PATH)) != 0) {
+            DPRINTF(E_ERROR, L_HTTP, "create directory %s fail with error code %d\n", PATH, ret);
+            SoapError(h, 501, "Action Failed");
+            goto destroy_error;
+        }
+    }
+    else
+    {
+        DPRINTF(E_ERROR, L_HTTP, "this file is not a normal directory or file can't be deleted %s\n", PATH);
+        SoapError(h, 501, "Action Failed");
+        goto destroy_error;
+    }
+
+    BuildSendAndCloseSoapResp(h, resp0, strlen(resp0));
+
+destroy_error:
+    sqlite3_free(PATH);
+    ClearNameValueList(&data);
+}
+
 /*
 If a control point calls QueryStateVariable on a state variable that is not
 buffered in memory within (or otherwise available from) the service,
@@ -1850,6 +2234,11 @@ soapMethods[] =
 	{ "QueryStateVariable", QueryStateVariable},
 	{ "Browse", BrowseContentDirectory},
 	{ "Search", SearchContentDirectory},
+#ifdef XIAODU_NAS
+	{ "CreateObject", CreateObject},
+	{ "UpdateObject", UpdateObject},
+	{ "DestroyObject", DestroyObject},
+#endif
 	{ "GetSearchCapabilities", GetSearchCapabilities},
 	{ "GetSortCapabilities", GetSortCapabilities},
 	{ "GetSystemUpdateID", GetSystemUpdateID},

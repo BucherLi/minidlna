@@ -163,12 +163,13 @@
 	"http-get:*:video/x-ms-wmv:*," \
 	"http-get:*:video/x-msvideo:*," \
 	"http-get:*:video/x-flv:*," \
-        "http-get:*:video/x-pn-realvideo:*," \
+	"http-get:*:video/x-pn-realvideo:*," \
 	"http-get:*:video/x-tivo-mpeg:*," \
 	"http-get:*:video/quicktime:*," \
 	"http-get:*:audio/mp4:*," \
 	"http-get:*:audio/x-wav:*," \
 	"http-get:*:audio/x-flac:*," \
+	"http-get:*:text/plain:*," \
 	"http-get:*:application/ogg:*"
 
 #define DLNA_FLAG_DLNA_V1_5      0x00100000

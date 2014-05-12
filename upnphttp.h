@@ -71,7 +71,12 @@ enum httpCommands {
 	EPost,
 	EHead,
 	ESubscribe,
+#ifdef XIAODU_NAS
+	EUnSubscribe,
+	EPUT
+#else
 	EUnSubscribe
+#endif
 };
 
 struct upnphttp {
@@ -108,6 +113,16 @@ struct upnphttp {
 	/*int res_contentlen;*/
 	/*int res_contentoff;*/		/* header length */
 	LIST_ENTRY(upnphttp) entries;
+#ifdef XIAODU_NAS
+	char ContainerID[64];		/* ContainerID for NAS */
+	char filename[256];
+	unsigned char *body_buf;             /* HTTP body for file upload */
+	int	 buffered_size;
+	char errMsg[64];
+	int outfd;					/* for store file uploaded */
+	int64_t total_size;			/* file size for uploaded */
+	int64_t received;			/* already received bytes from client */
+#endif
 };
 
 #define FLAG_TIMEOUT            0x00000001
@@ -127,6 +142,13 @@ struct upnphttp {
 #define FLAG_XFERINTERACTIVE    0x00002000
 #define FLAG_XFERBACKGROUND     0x00004000
 #define FLAG_CAPTION            0x00008000
+
+#ifdef XIAODU_NAS
+#define FLAG_NAS_UPLOAD_FILE	0x00100000
+
+/*  780 - 789 for xiaodu NAS private defination */
+#define CODE_NAS_UPLOAD_ERR		780
+#endif
 
 #ifndef MSG_MORE
 #define MSG_MORE 0
@@ -170,6 +192,10 @@ BuildResp2_upnphttp(struct upnphttp * h, int respcode,
                     const char * body, int bodylen);
 
 /* Error messages */
+#ifdef XIAODU_NAS
+void
+Send400(struct upnphttp *);
+#endif
 void
 Send500(struct upnphttp *);
 void

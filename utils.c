@@ -251,7 +251,11 @@ strip_ext(char * name)
 	char * period;
 
 	period = strrchr(name, '.');
+#ifdef XIAODU_NAS
+	if( period && period != name)
+#else
 	if( period )
+#endif
 		*period = '\0';
 }
 

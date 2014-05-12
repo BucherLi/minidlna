@@ -128,9 +128,57 @@ Delete_upnphttp(struct upnphttp * h)
 			CloseSocket_upnphttp(h);
 		free(h->req_buf);
 		free(h->res_buf);
+#ifdef XIAODU_NAS
+		free(h->body_buf);
+		if(h->outfd > 0)
+			close(h->outfd);
+#endif
 		free(h);
 	}
 }
+
+#ifdef XIAODU_NAS
+#define FILE_UPLOAD_ONCE_READ_SIZE 	10000
+#define FILE_UPLOAD_BUFFER_SIZE		1000000
+
+int get_query_kv(char *k, char *v, char **next, const char *src_str)
+{
+	if(NULL == k || NULL == v ||
+			NULL == src_str || strlen(src_str) <= 0 ||
+			next == NULL){
+		return 0;
+	}
+
+	*next = NULL;
+	k[0] = v[0] = '\0';
+	int i, j, len;
+	char *start_p, *end_p, *seg_p;
+	end_p = strchr(src_str, '&');
+	if(end_p){
+		*next = end_p + 1;
+		len = end_p - src_str;
+	}else{
+		*next = NULL;
+		len = strlen(src_str);
+	}
+
+	for(i = 0; i < len; i++){
+		if(src_str[i] == '='){
+			if(i == 0 || i == len - 1)
+				return -1;
+			memcpy(k, src_str, i);
+			k[i] = '\0';
+			memcpy(v, src_str + i + 1, len - i - 1);
+			v[len - i - 1] = '\0';
+			break;
+		}
+	}
+	if(i >= len - 1)
+		return -1;
+
+	return 0;
+}
+#endif
 
 /* parse HttpHeaders of the REQUEST */
 static void
@@ -140,6 +188,41 @@ ParseHttpHeaders(struct upnphttp * h)
 	char * colon;
 	char * p;
 	int n;
+
+#ifdef XIAODU_NAS
+	int i = 0, ret, linelen;
+	char *tmpline = h->req_buf, *start_ptr = NULL, *next_ptr = NULL;
+	while(!(tmpline[0] == '\r' && tmpline[1] == '\n'))
+		tmpline++;
+	linelen = tmpline - h->req_buf + 1;
+
+	char URIline[512], *space_p;
+	memcpy(URIline, h->req_buf, linelen);
+	URIline[linelen] = '\0';
+	while(URIline[i] != '?' && i < linelen - 1)
+		i++;
+	space_p = strchr(URIline + i + 1, ' ');
+	if(i < linelen - 1 && space_p != NULL){
+		*space_p = '\0';
+		next_ptr = URIline + i + 1;
+
+		/* get ContainerID and filename from POST query */
+		while (next_ptr) {
+			char k[32], v[256];
+			start_ptr = next_ptr;
+			ret = get_query_kv(k, v, &next_ptr, start_ptr);
+			if (ret == 0) {
+				if (strcmp(k, "ContainerID") == 0) {
+					snprintf(h->ContainerID, sizeof(h->ContainerID), "%s", v);
+				} else if (strcmp(k, "filename") == 0) {
+					snprintf(h->filename, sizeof(h->filename), "%s", v);
+				}
+			}
+			h->reqflags |= FLAG_NAS_UPLOAD_FILE;
+		}
+	}
+#endif
+
 	line = h->req_buf;
 	/* TODO : check if req_buf, contentoff are ok */
 	while(line < (h->req_buf + h->req_contentoff))
@@ -451,8 +534,9 @@ next_header:
 		h->req_client = clients[n].type;
 }
 
+
 /* very minimalistic 400 error message */
-static void
+void
 Send400(struct upnphttp * h)
 {
 	static const char body400[] =
@@ -645,6 +729,10 @@ ProcessHTTPPOST_upnphttp(struct upnphttp * h)
 {
 	if((h->req_buflen - h->req_contentoff) >= h->req_contentlen)
 	{
+/*#ifdef XIAODU_NAS
+		if(h->reqflags & FLAG_NAS_UPLOAD_FILE)
+			return;
+#endif*/
 		if(h->req_soapAction)
 		{
 			/* we can process the request */
@@ -790,6 +878,114 @@ ProcessHTTPUnSubscribe_upnphttp(struct upnphttp * h, const char * path)
 	CloseSocket_upnphttp(h);
 }
 
+#ifdef XIAODU_NAS
+static int
+ProcessHTTPPOST_uploadfile(struct upnphttp * h)
+{
+	if(!(h->reqflags & FLAG_NAS_UPLOAD_FILE))
+	{
+		strcpy(h->errMsg, "FLAG is not FLAG_NAS_UPLOAD_FILE");
+		return -1;
+	}
+
+	int size = -2;
+
+	if(h->body_buf == NULL){
+		if(FILE_UPLOAD_BUFFER_SIZE < h->req_contentlen ||
+				FILE_UPLOAD_BUFFER_SIZE < FILE_UPLOAD_ONCE_READ_SIZE){
+			snprintf(h->errMsg, sizeof(h->errMsg), "upload buffer size[%d] too small",
+					FILE_UPLOAD_BUFFER_SIZE);
+			return -1;
+		}
+		h->body_buf = (unsigned char *)malloc(FILE_UPLOAD_BUFFER_SIZE);
+		if(h->body_buf == NULL){
+			snprintf(h->errMsg, sizeof(h->errMsg),
+					"HTTP buffer malloc FAIL, size[%d]", FILE_UPLOAD_BUFFER_SIZE);
+			return -1;
+		}
+		h->total_size = h->req_contentlen;
+		memcpy(h->body_buf, h->req_buf + h->req_contentoff, h->req_buflen - h->req_contentoff);
+		h->buffered_size += h->req_buflen - h->req_contentoff;
+		if(h->buffered_size > h->total_size)
+			h->buffered_size = h->total_size;
+
+		/* get PATH from ContainerID */
+		char *dir_path;
+		if (strcmp(h->ContainerID, "64") == 0 || strcmp(h->ContainerID, "0") == 0) {
+			dir_path = sql_get_text_field(db,
+					"select PATH from DETAILS where PATH IS NOT NULL LIMIT 1");
+		} else {
+			dir_path= sql_get_text_field(db,
+							"select PATH from DETAILS where ID = (select DETAIL_ID from OBJECTS where (OBJECT_ID = '%q' and CLASS = 'container.storageFolder'))",
+							h->ContainerID);
+		}
+
+		if (dir_path == NULL) {
+			DPRINTF(E_WARN, L_HTTP, "ContainerId %s can't be located or illegal\n",
+					h->ContainerID);
+			snprintf(h->errMsg, sizeof(h->errMsg), "ContainerID %s can't be located", h->ContainerID);
+			//SoapError(h, 710, "No such container");
+			return -1;
+		}
+		DPRINTF(E_DEBUG, L_HTTP, "ContainerId is %s, PATH is %s\n", h->ContainerID, dir_path);
+		char CompletePath[1024];
+		snprintf(CompletePath, sizeof(CompletePath), "%s/%s", dir_path, h->filename);
+		sqlite3_free(dir_path);
+
+		/* open local file for receive uploaded file*/
+		h->outfd = open(CompletePath, O_CREAT | O_WRONLY, 0700);
+		if(h->outfd == -1){
+			snprintf(h->errMsg, sizeof(h->errMsg),
+					"open local file for write FAIL, path[%s]", CompletePath);
+			DPRINTF(E_WARN, L_HTTP, "Open local file for write FAIL, path[%s]", CompletePath);
+			return -1;
+		}
+
+	}else{
+		size = read(h->socket, h->body_buf + h->buffered_size,
+							FILE_UPLOAD_ONCE_READ_SIZE);
+		if(size == -1){
+			DPRINTF(E_ERROR, L_HTTP, "Connection closed error");
+			strcpy(h->errMsg, "Connection closed error");
+			return -1;
+		}else if(size == 0){
+			if(h->received + h->buffered_size != h->total_size){
+				DPRINTF(E_WARN, L_HTTP,
+						"Connection unexpectedly closed. tatol_size[%lld], already_received[%lld]\n",
+						h->total_size, h->received + h->buffered_size);
+				strcpy(h->errMsg, "Connection unexpectedly closed");
+				return -1;
+			}else{
+				DPRINTF(E_INFO, L_HTTP, "Connection finished");
+			}
+		}else if(size > 0){
+			h->buffered_size += size;
+			int64_t remaining = h->total_size - h->received;
+			if(remaining < h->buffered_size){
+				DPRINTF(E_INFO, L_HTTP, "Connection finished, adjust last buffered_size[%d] to remaining[%lld]\n",
+						h->buffered_size, remaining);
+				h->buffered_size = remaining;
+			}
+		}
+	}
+
+	if (h->buffered_size == h->total_size - h->received || size == 0 || size == -1 ||
+					h->buffered_size >= FILE_UPLOAD_BUFFER_SIZE - FILE_UPLOAD_ONCE_READ_SIZE) {
+		/* This should always succeed */
+		lseek(h->outfd, h->received, SEEK_SET);
+		if (write(h->outfd, h->body_buf, h->buffered_size)
+				!= h->buffered_size) {
+			DPRINTF(E_ERROR, L_HTTP, "Write error.\n");
+			return -1;
+		}
+		h->received += h->buffered_size;
+		h->buffered_size = 0;
+	}
+
+	return 0;
+}
+#endif
+
 /* Parse and process Http Query 
  * called once all the HTTP headers have been received. */
 static void
@@ -874,6 +1070,30 @@ ProcessHttpQuery_upnphttp(struct upnphttp * h)
 		h->req_command = EPost;
 		ProcessHTTPPOST_upnphttp(h);
 	}
+#ifdef XIAODU_NAS
+	else if(strcmp("PUT", HttpCommand) == 0)
+	{
+		h->req_command = EPUT;
+		if(h->reqflags & FLAG_NAS_UPLOAD_FILE)
+		{
+			h->state = 3;
+			if(ProcessHTTPPOST_uploadfile(h) != 0)
+			{
+				SoapError(h, CODE_NAS_UPLOAD_ERR, h->errMsg);
+			}else{
+				if (h->received == h->total_size) {
+					BuildResp_upnphttp(h, 0, 0);
+					SendResp_upnphttp(h);
+					CloseSocket_upnphttp(h);
+				}
+			}
+		}else{
+			DPRINTF(E_WARN, L_HTTP, "reqflags & FLAG_NAS_UPLOAD_FILE == NULL, ERROR!\n");
+			Send400(h);
+			return;
+		}
+	}
+#endif
 	else if((strcmp("GET", HttpCommand) == 0) || (strcmp("HEAD", HttpCommand) == 0))
 	{
 		if( ((strcmp(h->HttpVer, "HTTP/1.1")==0) && !(h->reqflags & FLAG_HOST)) || (h->reqflags & FLAG_INVALID_REQ) )
@@ -1096,6 +1316,22 @@ Process_upnphttp(struct upnphttp * h)
 			}
 		}
 		break;
+#ifdef XIAODU_NAS
+	case 3:
+		if(ProcessHTTPPOST_uploadfile(h) != 0)
+		{
+			SoapError(h, CODE_NAS_UPLOAD_ERR, h->errMsg);
+		}else
+		{
+			if(h->received == h->total_size)
+			{
+				BuildResp_upnphttp(h, 0, 0);
+				SendResp_upnphttp(h);
+				CloseSocket_upnphttp(h);
+			}
+		}
+		break;
+#endif
 	default:
 		DPRINTF(E_WARN, L_HTTP, "Unexpected state: %d\n", h->state);
 	}

@@ -342,7 +342,9 @@ GetAudioMetadata(const char *path, char *name)
 
 	if ( stat(path, &file) != 0 )
 		return 0;
+#ifndef XIAODU_NAS
 	strip_ext(name);
+#endif
 
 	if( ends_with(path, ".mp3") )
 	{
@@ -552,7 +554,9 @@ GetImageMetadata(const char *path, char *name)
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, "Parsing %s...\n", path);
 	if ( stat(path, &file) != 0 )
 		return 0;
+#ifndef XIAODU_NAS
 	strip_ext(name);
+#endif
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, " * size: %jd\n", file.st_size);
 
 	/* MIME hard-coded to JPEG for now, until we add PNG support */
@@ -726,7 +730,9 @@ GetVideoMetadata(const char *path, char *name)
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, "Parsing video %s...\n", name);
 	if ( stat(path, &file) != 0 )
 		return 0;
+#ifndef XIAODU_NAS
 	strip_ext(name);
+#endif
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, " * size: %jd\n", file.st_size);
 
 	ret = lav_open(&ctx, path);
@@ -1623,3 +1629,39 @@ video_no_dlna:
 
 	return ret;
 }
+
+#ifdef XIAODU_NAS
+int64_t
+GetOtherMetadata(const char *path, char *name)
+{
+	struct stat file;
+	int64_t	    ret;
+	metadata_t m;
+	uint32_t free_flags = 0xFFFFFFFF;
+	memset(&m, '\0', sizeof(metadata_t));
+
+	if ( stat(path, &file) != 0 )
+		return 0;
+	//strip_ext(name);
+
+	m.mime = strdup("text/plain");
+
+	ret = sql_exec(db, "INSERT into DETAILS"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP, MIME) "
+	                   "VALUES"
+	                   " (%Q, '%q', %lld, %ld, %Q);",
+	                   path, name, (long long)file.st_size, file.st_mtime, m.mime);
+	if( ret != SQLITE_OK )
+	{
+		fprintf(stderr, "Error inserting details for '%s'!\n", path);
+		ret = 0;
+	}
+	else
+	{
+		ret = sqlite3_last_insert_rowid(db);
+	}
+	free_metadata(&m, free_flags);
+
+	return ret;
+}
+#endif
