@@ -201,6 +201,10 @@ Send500(struct upnphttp *);
 void
 Send501(struct upnphttp *);
 
+#ifdef BAIDU_DMS_OPT
+int send_data(struct upnphttp * h, char * header, size_t size, int flags);
+#endif
+
 /* SendResp_upnphttp() */
 void
 SendResp_upnphttp(struct upnphttp *);

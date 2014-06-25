@@ -93,6 +93,9 @@
 #include "log.h"
 #include "tivo_beacon.h"
 #include "tivo_utils.h"
+#ifdef BAIDU_DMS_OPT
+#include "cJSON.h"
+#endif
 
 #if SQLITE_VERSION_NUMBER < 3005001
 # warning "Your SQLite3 library appears to be too old!  Please use 3.5.1 or newer."
@@ -496,6 +499,28 @@ init(int argc, char **argv)
 		}
 	}
 
+#ifdef BAIDU_DMS_OPT
+	FILE *fp = fopen("/tmp/baidu_daemon.info", "r");
+	if(fp != NULL){
+		char daemon_info[1024] = {0};
+		fread(daemon_info, 1, 1024, fp);
+		fclose(fp);
+		cJSON *j_info = cJSON_Parse(daemon_info), *j_tmp;
+		if(j_info && cJSON_Object == j_info->type){
+			j_tmp = cJSON_GetObjectItem(j_info, "device_id");
+			if(j_tmp && cJSON_String == j_tmp->type && strlen(j_tmp->valuestring) > 0)
+				strcpy(uuidvalue + 5, j_tmp->valuestring);
+
+			j_tmp = cJSON_GetObjectItem(j_info, "deviceName");
+			if(j_tmp && cJSON_String == j_tmp->type && strlen(j_tmp->valuestring) > 0)
+				strcpy(friendly_name, j_tmp->valuestring);
+		}
+		cJSON_Delete(j_info);
+	}else{
+		strcpy(uuidvalue + 5, "4d696e69-444c-164e-9d41-554e4b4e4f58");
+		strcpy(friendly_name, "Baidu AV-Router");
+	}
+#else
 	/* set up uuid based on mac address */
 	if (getsyshwaddr(mac_str, sizeof(mac_str)) < 0)
 	{
@@ -505,7 +530,9 @@ init(int argc, char **argv)
 	strcpy(uuidvalue+5, "4d696e69-444c-164e-9d41-");
 	strncat(uuidvalue, mac_str, 12);
 
+
 	getfriendlyname(friendly_name, FRIENDLYNAME_MAX_LEN);
+#endif
 	
 	runtime_vars.port = 8200;
 	runtime_vars.notify_interval = 895;	/* seconds between SSDP announces */

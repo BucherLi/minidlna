@@ -432,7 +432,12 @@ is_audio(const char * file)
 int
 is_image(const char * file)
 {
+#ifdef BAIDU_DMS_OPT
+	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg") ||
+			ends_with(file, ".png") );
+#else
 	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg"));
+#endif
 }
 
 int

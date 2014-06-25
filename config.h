@@ -337,14 +337,14 @@
 #define HAVE__BOOL 1
 
 /* Define as const if the declaration of iconv() needs const. */
-#define ICONV_CONST const
+#define ICONV_CONST 
 
 /* Define to enable logging */
 /* #undef LOG_PERROR */
 
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
-/* #undef LSTAT_FOLLOWS_SLASHED_SYMLINK */
+#define LSTAT_FOLLOWS_SLASHED_SYMLINK 1
 
 /* Define to 1 if you want to enable generic NETGEAR device support */
 /* #undef NETGEAR */
@@ -395,10 +395,15 @@
 #define ROOTDEV_MODELDESCRIPTION "MiniDLNA on " OS_NAME
 
 /* Model name */
+#ifdef BAIDU_DMS_OPT
+#define ROOTDEV_MODELNAME 	"Baidu Router"
+#define ROOTDEV_MODELURL	"http://link.baidu.com/"
+#else
 #define ROOTDEV_MODELNAME "Windows Media Connect compatible (MiniDLNA)"
 
 /* Model URL */
 #define ROOTDEV_MODELURL OS_URL
+#endif
 
 /* scandir needs const char cast */
 #define SCANDIR_CONST 1

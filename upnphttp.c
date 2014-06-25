@@ -986,6 +986,323 @@ ProcessHTTPPOST_uploadfile(struct upnphttp * h)
 }
 #endif
 
+#ifdef BAIDU_DMS_OPT
+static void SendResp_httpOK(struct upnphttp * h, const char *HttpUrl){
+	char str[256];
+	snprintf(str, 256, "{\"errCode\":\"0\"}");
+	BuildResp_upnphttp(h, str, strlen(str));
+	SendResp_upnphttp(h);
+	CloseSocket_upnphttp(h);
+	return;
+}
+
+/* Receive file path from baidu_daemon and Return presentation path in DMS */
+static void SendResp_dlnaurl(struct upnphttp * h, const char *HttpUrl){
+	char str[512] = {0}, sql[512], *id = NULL,
+		 **result = NULL, *mime = NULL, *class = NULL;
+	const char *ext = NULL;
+	int row = 0, col = 0, ret;
+	if(HttpUrl == NULL)
+		goto END;
+	snprintf(sql, sizeof(sql), "SELECT ID, MIME from DETAILS where (PATH = '%s') limit 1", HttpUrl);
+	ret = sql_get_table(db, sql, &result, &row, &col);
+	if(ret != SQLITE_OK || row <= 1){
+		DPRINTF(E_INFO, L_HTTP, "No file found Url %s.\n", HttpUrl);
+		goto END;
+	}
+	id = result[2];
+	mime = result[3];
+
+	class = sql_get_text_field(db, "SELECT CLASS from OBJECTS where DETAIL_ID = '%s'", id);
+	if(class == NULL){
+		DPRINTF(E_INFO, L_HTTP, "No file found DETAIL_ID %s Url %s.\n", id, HttpUrl);
+		goto END;
+	}
+	if(strcmp(class, "item.videoItem") &&
+			strcmp(class, "item.audioItem.musicTrack") &&
+			strcmp(class, "item.imageItem.photo")){
+		DPRINTF(E_INFO, L_HTTP, "No file found multimedia type %s Url %s.\n", class ? class:"null", HttpUrl);
+		goto END;
+	}
+
+	ext = mime_to_ext(mime);
+	snprintf(str, 256, "{\"errCode\":\"0\", \"dlnaUrl\":\"http://%s:%d/MediaItems/%s.%s\"}",
+			lan_addr[h->iface].str, runtime_vars.port, id, ext);
+
+END:
+	if(result)
+		sqlite3_free_table(result);
+	if(class)
+		sqlite3_free(class);
+	if(str[0] == 0)
+		snprintf(str, 256, "{\"errCode\":\"-1\"}");
+	BuildResp_upnphttp(h, str, strlen(str));
+	SendResp_upnphttp(h);
+	CloseSocket_upnphttp(h);
+	return;
+}
+
+static int htoi(char *s)
+{
+    int value;
+    int c;
+
+    c = ((unsigned char *)s)[0];
+    if (isupper(c))
+        c = tolower(c);
+    value = (c >= '0' && c <= '9' ? c - '0' : c - 'a' + 10) * 16;
+
+    c = ((unsigned char *)s)[1];
+    if (isupper(c))
+        c = tolower(c);
+    value += c >= '0' && c <= '9' ? c - '0' : c - 'a' + 10;
+
+    return (value);
+}
+
+static int url_decode(char *str, int len)
+{
+    char *dest = str;
+    char *data = str;
+
+    while (len--)
+    {
+        if (*data == '+')
+        {
+            *dest = ' ';
+        }
+        else if (*data == '%' && len >= 2 && isxdigit((int) *(data + 1)) && isxdigit((int) *(data + 2)))
+        {
+            *dest = (char) htoi(data + 1);
+            data += 2;
+            len -= 2;
+        }
+        else
+        {
+            *dest = *data;
+        }
+        data++;
+        dest++;
+    }
+    *dest = '\0';
+    return dest - str;
+}
+
+static void SendResp_httpfile(struct upnphttp * h, const char *HttpUrl){
+	char header[1024];
+	struct string_s str;
+	char buf[128];
+	char **result;
+	int rows, ret;
+	char date[30];
+	time_t curtime = time(NULL);
+	off_t total, offset, size;
+	int64_t id;
+	int sendfh;
+	uint32_t dlna_flags = DLNA_FLAG_DLNA_V1_5|DLNA_FLAG_HTTP_STALLING|DLNA_FLAG_TM_B;
+	uint32_t cflags = client_types[h->req_client].flags;
+	char mime[64];
+	/*static struct { int64_t id;
+	enum client_types client;
+	char path[PATH_MAX];
+	char mime[32];
+	char dlna[96];
+	} last_file = { 0, 0 };*/
+#if USE_FORK
+	pid_t newpid = 0;
+#endif
+
+	/*id = strtoll(object, NULL, 10);
+	if( cflags & FLAG_MS_PFS )
+	{
+		if( strstr(object, "?albumArt=true") )
+		{
+			char *art;
+			art = sql_get_text_field(db, "SELECT ALBUM_ART from DETAILS where ID = '%lld'", id);
+			SendResp_albumArt(h, art);
+			sqlite3_free(art);
+			return;
+		}
+	}
+	if( id != last_file.id || h->req_client != last_file.client )
+	{
+		snprintf(buf, sizeof(buf), "SELECT PATH, MIME, DLNA_PN from DETAILS where ID = '%lld'", (long long)id);
+		ret = sql_get_table(db, buf, &result, &rows, NULL);
+		if( (ret != SQLITE_OK) )
+		{
+			DPRINTF(E_ERROR, L_HTTP, "Didn't find valid file for %lld!\n", id);
+			Send500(h);
+			return;
+		}
+		if( !rows || !result[3] || !result[4] )
+		{
+			DPRINTF(E_WARN, L_HTTP, "%s not found, responding ERROR 404\n", object);
+			sqlite3_free_table(result);
+			Send404(h);
+			return;
+		}
+
+		last_file.id = id;
+		last_file.client = h->req_client;
+		strncpy(last_file.path, result[3], sizeof(last_file.path)-1);
+		if( result[4] )
+		{
+			strncpy(last_file.mime, result[4], sizeof(last_file.mime)-1);
+
+			if( cflags & FLAG_SAMSUNG )
+			{
+				if( strcmp(last_file.mime+6, "x-matroska") == 0 )
+					strcpy(last_file.mime+8, "mkv");
+
+				else if( h->req_client == ESamsungSeriesA &&
+						strcmp(last_file.mime+6, "x-msvideo") == 0 )
+					strcpy(last_file.mime+6, "mpeg");
+			}
+
+			else if( h->req_client == ESonyBDP )
+			{
+				if( strcmp(last_file.mime+6, "x-matroska") == 0 ||
+						strcmp(last_file.mime+6, "mpeg") == 0 )
+					strcpy(last_file.mime+6, "divx");
+			}
+		}
+		if( result[5] )
+			snprintf(last_file.dlna, sizeof(last_file.dlna), "DLNA.ORG_PN=%s;", result[5]);
+		else
+			last_file.dlna[0] = '\0';
+		sqlite3_free_table(result);
+	}*/
+#if USE_FORK
+	newpid = process_fork();
+	if( newpid > 0 )
+	{
+		CloseSocket_upnphttp(h);
+		return;
+	}
+#endif
+
+	url_decode(HttpUrl, strlen(HttpUrl));
+	DPRINTF(E_INFO, L_HTTP, "Serving file PATH: [%s]\n", HttpUrl);
+
+	offset = h->req_RangeStart;
+	sendfh = open(HttpUrl, O_RDONLY);
+	if( sendfh < 0 ) {
+		DPRINTF(E_ERROR, L_HTTP, "Error opening %s\n", HttpUrl);
+		Send404(h);
+		goto error;
+	}
+	size = lseek(sendfh, 0, SEEK_END);
+	lseek(sendfh, 0, SEEK_SET);
+
+	str.data = header;
+	str.size = sizeof(header);
+	str.off = 0;
+
+	if(is_video(HttpUrl))
+		snprintf(mime, 64, "video/mp4");
+	else if(is_audio(HttpUrl))
+		snprintf(mime, 64, "audio/mp3");
+	else if(is_image(HttpUrl))
+		snprintf(mime, 64, "image/jpeg");
+	else
+		snprintf(mime, 64, "video/mp4");
+
+	strcatf(&str, "HTTP/1.1 20%c OK\r\n"
+			"Content-Type: %s\r\n",
+			(h->reqflags & FLAG_RANGE ? '6' : '0'),
+			mime);
+	if( h->reqflags & FLAG_RANGE )
+	{
+		if( !h->req_RangeEnd || h->req_RangeEnd == size )
+		{
+			h->req_RangeEnd = size - 1;
+		}
+		if( (h->req_RangeStart > h->req_RangeEnd) || (h->req_RangeStart < 0) )
+		{
+			DPRINTF(E_WARN, L_HTTP, "Specified range was invalid!\n");
+			Send400(h);
+			close(sendfh);
+			goto error;
+		}
+		if( h->req_RangeEnd >= size )
+		{
+			DPRINTF(E_WARN, L_HTTP, "Specified range was outside file boundaries!\n");
+			Send416(h);
+			close(sendfh);
+			goto error;
+		}
+
+		total = h->req_RangeEnd - h->req_RangeStart + 1;
+		strcatf(&str, "Content-Length: %jd\r\n"
+				"Content-Range: bytes %jd-%jd/%jd\r\n",
+				(intmax_t)total, (intmax_t)h->req_RangeStart,
+				(intmax_t)h->req_RangeEnd, (intmax_t)size);
+	}
+	else
+	{
+		h->req_RangeEnd = size - 1;
+		total = size;
+		strcatf(&str, "Content-Length: %jd\r\n", (intmax_t)total);
+	}
+
+#if USE_FORK
+	if( (h->reqflags & FLAG_XFERBACKGROUND) && (setpriority(PRIO_PROCESS, 0, 19) == 0) )
+		strcatf(&str, "transferMode.dlna.org: Background\r\n");
+	else
+#endif
+		if( strncmp(mime, "image", 5) == 0 )
+			strcatf(&str, "transferMode.dlna.org: Interactive\r\n");
+		else
+			strcatf(&str, "transferMode.dlna.org: Streaming\r\n");
+
+	switch( *mime )
+	{
+	case 'i':
+		dlna_flags |= DLNA_FLAG_TM_I;
+		break;
+	case 'a':
+	case 'v':
+	default:
+		dlna_flags |= DLNA_FLAG_TM_S;
+		break;
+	}
+
+	if( h->reqflags & FLAG_CAPTION )
+	{
+		if( sql_get_int_field(db, "SELECT ID from CAPTIONS where ID = '%lld'", id) > 0 )
+			strcatf(&str, "CaptionInfo.sec: http://%s:%d/Captions/%lld.srt\r\n",
+					lan_addr[h->iface].str, runtime_vars.port, id);
+	}
+
+	strftime(date, 30,"%a, %d %b %Y %H:%M:%S GMT" , gmtime(&curtime));
+	strcatf(&str, "Accept-Ranges: bytes\r\n"
+			"Connection: close\r\n"
+			"Date: %s\r\n"
+			"EXT:\r\n"
+			"realTimeInfo.dlna.org: DLNA.ORG_TLAG=*\r\n"
+			"contentFeatures.dlna.org: %sDLNA.ORG_OP=%02X;DLNA.ORG_CI=%X;DLNA.ORG_FLAGS=%08X%024X\r\n"
+			"Server: " MINIDLNA_SERVER_STRING "\r\n\r\n",
+			date, "", 1, 0, dlna_flags, 0);
+
+	//DEBUG DPRINTF(E_DEBUG, L_HTTP, "RESPONSE: %s\n", str.data);
+	if( send_data(h, str.data, str.off, MSG_MORE) == 0 )
+	{
+		if( h->req_command != EHead )
+			send_file(h, sendfh, offset, h->req_RangeEnd);
+	}
+	close(sendfh);
+
+	CloseSocket_upnphttp(h);
+	error:
+#if USE_FORK
+	if( newpid == 0 )
+		_exit(0);
+#endif
+	return;
+}
+
+#endif
+
 /* Parse and process Http Query 
  * called once all the HTTP headers have been received. */
 static void
@@ -1218,6 +1535,17 @@ ProcessHttpQuery_upnphttp(struct upnphttp * h)
 			SendResp_presentation(h);
 			#endif
 		}
+#ifdef BAIDU_DMS_OPT
+		else if(strncmp(HttpUrl, "/dlnasniff", 10) == 0)
+		{
+			SendResp_httpOK(h, HttpUrl);
+			//SendResp_dlnaurl(h, HttpUrl);
+		}
+		else if(strncmp(HttpUrl, "/dlnafile", 9) == 0)
+		{
+			SendResp_httpfile(h, HttpUrl + 9);
+		}
+#endif
 		else
 		{
 			DPRINTF(E_WARN, L_HTTP, "%s not found, responding ERROR 404\n", HttpUrl);
