@@ -328,6 +328,10 @@ GetFolderMetadata(const char *name, const char *path, const char *artist, const 
 int64_t
 GetAudioMetadata(const char *path, char *name)
 {
+#ifdef BAIDU_DMS_OPT
+	char full_name[64];
+	snprintf(full_name,sizeof(full_name),"%s",name);
+#endif
 	char type[4];
 	static char lang[6] = { '\0' };
 	struct stat file;
@@ -342,10 +346,17 @@ GetAudioMetadata(const char *path, char *name)
 
 	if ( stat(path, &file) != 0 )
 		return 0;
-#ifndef XIAODU_NAS
-	strip_ext(name);
-#endif
 
+	strip_ext(name);
+#ifdef BAIDU_DMS_OPT
+	if( ends_with(path, ".mp3") || ends_with(path, ".flac") ||
+		ends_with(path, ".wma") || ends_with(path, ".asf")  ||
+		ends_with(path, ".fla") || ends_with(path, ".flc")  ||
+		ends_with(path, ".m4a") || ends_with(path, ".aac")  ||
+		ends_with(path, ".mp4") || ends_with(path, ".m4p")  ||
+		ends_with(path, ".pcm") || ends_with(path, ".3gp")  )
+  {
+#endif
 	if( ends_with(path, ".mp3") )
 	{
 		strcpy(type, "mp3");
@@ -372,26 +383,13 @@ GetAudioMetadata(const char *path, char *name)
 		strcpy(type, "flc");
 		m.mime = strdup("audio/x-flac");
 	}
-	else if( ends_with(path, ".wav") )
-	{
-		strcpy(type, "wav");
-		m.mime = strdup("audio/x-wav");
-	}
-	else if( ends_with(path, ".ogg") || ends_with(path, ".oga") )
-	{
-		strcpy(type, "ogg");
-		m.mime = strdup("audio/ogg");
-	}
+
 	else if( ends_with(path, ".pcm") )
 	{
 		strcpy(type, "pcm");
 		m.mime = strdup("audio/L16");
 	}
-	else
-	{
-		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
-		return 0;
-	}
+
 
 	if( !(*lang) )
 	{
@@ -496,7 +494,18 @@ GetAudioMetadata(const char *path, char *name)
 			m.comment = esc_tag;
 		}
 	}
+#ifdef BAIDU_DMS_OPT
+	album_art = find_album_art(path, song.image, song.image_size);
 
+	ret = sql_exec(db, "INSERT into DETAILS"
+	                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
+	                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
+	                   "VALUES"
+	                   " (%Q, %lld, %ld, '%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
+	                   path, (long long)file.st_size, file.st_mtime, m.duration, song.channels, song.bitrate, song.samplerate, m.date,
+	                   full_name, m.creator, m.artist, m.album, m.genre, m.comment, song.disc, song.track,
+	                   m.dlna_pn, song.mime?song.mime:m.mime, album_art);
+#else
 	album_art = find_album_art(path, song.image, song.image_size);
 
 	ret = sql_exec(db, "INSERT into DETAILS"
@@ -507,6 +516,92 @@ GetAudioMetadata(const char *path, char *name)
 	                   path, (long long)file.st_size, file.st_mtime, m.duration, song.channels, song.bitrate, song.samplerate, m.date,
 	                   m.title, m.creator, m.artist, m.album, m.genre, m.comment, song.disc, song.track,
 	                   m.dlna_pn, song.mime?song.mime:m.mime, album_art);
+#endif
+#ifdef BAIDU_DMS_OPT
+  }
+	else
+  {
+	if( ends_with(path, ".ra") )
+	{
+		strcpy(type, "ra");
+		m.mime = strdup("audio/x-pn-realaudio");
+	}
+	else if( ends_with(path, ".ram") )
+	{
+		strcpy(type, "ra");
+		m.mime = strdup("audio/x-pn-realaudio");
+	}
+	else if( ends_with(path, ".aac+") )
+	{
+		strcpy(type, "aac+");
+		m.mime = strdup("audio/aacp");
+	}
+	else if( ends_with(path, ".eaac+") )
+	{
+		strcpy(type, "eaac+");
+		m.mime = strdup("audio/eaacp");
+	}
+	else if( ends_with(path, ".amr") )
+	{
+		strcpy(type, "amr");
+		m.mime = strdup("audio/amr");
+	}
+	else if( ends_with(path, ".mid") )
+	{
+		strcpy(type, "mid");
+		m.mime = strdup("audio/mid");
+	}
+	else if( ends_with(path, ".midi") )
+	{
+		strcpy(type, "midi");
+		m.mime = strdup("audio/mid");
+	}
+	else if( ends_with(path, ".mp2") )
+	{
+		strcpy(type, "mp2");
+		m.mime = strdup("audio/mp2");
+	}
+	else if( ends_with(path, ".aif") )
+	{
+		strcpy(type, "aif");
+		m.mime = strdup("audio/aiff");
+	}
+	else if( ends_with(path, ".mpega"))
+	{
+		strcpy(type, "mpega");
+		m.mime = strdup("audio/x-mpeg");
+	}
+	else if( ends_with(path, ".wav") )
+	{
+		strcpy(type, "wav");
+		m.mime = strdup("audio/x-wav");
+	}
+	else if( ends_with(path, ".ogg" ))
+	{
+		strcpy(type, "ogg");
+		m.mime = strdup("audio/ogg");
+	}
+	else
+		{
+			DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
+			return 0;
+		}
+	if( readtags((char *)path, &song, &file, lang, type) != 0 )
+		{
+			DPRINTF(E_WARN, L_GENERAL, "Cannot extract tags from %s!\n", path);
+	        	freetags(&song);
+			free_metadata(&m, free_flags);
+			return 0;
+		}
+	ret = sql_exec(db, "INSERT into DETAILS"
+		                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
+		                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
+		                   "VALUES"
+		                   " (%Q, %lld, %ld, '%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
+		                   path, (long long)file.st_size, file.st_mtime, NULL, NULL, NULL,NULL,NULL,
+		                   full_name,NULL, NULL, NULL,NULL,NULL,0,0,NULL,m.mime, album_art);
+  }
+#endif
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);
@@ -535,6 +630,10 @@ libjpeg_error_handler(j_common_ptr cinfo)
 int64_t
 GetImageMetadata(const char *path, char *name)
 {
+#ifdef BAIDU_DMS_OPT
+	char full_name[64];
+	snprintf(full_name,sizeof(full_name),"%s",name);
+#endif
 	ExifData *ed;
 	ExifEntry *e = NULL;
 	ExifLoader *l;
@@ -550,16 +649,16 @@ GetImageMetadata(const char *path, char *name)
 	metadata_t m;
 	uint32_t free_flags = 0xFFFFFFFF;
 	memset(&m, '\0', sizeof(metadata_t));
-
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, "Parsing %s...\n", path);
 	if ( stat(path, &file) != 0 )
 		return 0;
-#ifndef XIAODU_NAS
 	strip_ext(name);
-#endif
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, " * size: %jd\n", file.st_size);
 
 	/* MIME hard-coded to JPEG for now, until we add PNG support */
+#ifdef BAIDU_DMS_OPT
+	if( ends_with(path, ".jpg")){
+#endif
 	m.mime = strdup("image/jpeg");
 
 	l = exif_loader_new();
@@ -684,14 +783,139 @@ no_exifdata:
 	else if( (width <= 4096 && height <= 4096) || !GETFLAG(DLNA_STRICT_MASK) )
 		m.dlna_pn = strdup("JPEG_LRG");
 	xasprintf(&m.resolution, "%dx%d", width, height);
-
+#ifdef BAIDU_DMS_OPT
+	ret = sql_exec(db, "INSERT into DETAILS"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
+	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
+	                   "VALUES"
+	                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+	                   path, full_name, (long long)file.st_size, file.st_mtime, m.date, m.resolution,
+                    m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
+#else
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
 	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 	                   "VALUES"
 	                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
 	                   path, name, (long long)file.st_size, file.st_mtime, m.date, m.resolution,
-	                   m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
+                    m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
+#endif
+#ifdef BAIDU_DMS_OPT
+	}
+	else
+	{
+		if(ends_with(path, ".png") )
+		 {
+			m.mime = strdup("image/png");
+
+		  }
+		else if(ends_with(path, ".gif"))
+		{
+			m.mime = strdup("image/gif");
+
+		}
+		else if(ends_with(path, ".jpeg"))
+		{
+			m.mime = strdup("image/jpg");
+
+		}
+		else if(ends_with(path, ".tif"))
+		{
+			m.mime = strdup("image/tiff");
+
+		}
+		else if(ends_with(path, ".tiff"))
+					{
+						m.mime = strdup("image/tiff");
+
+					}
+		else if(ends_with(path, ".ico"))
+				{
+					m.mime = strdup("image/x-icon");
+
+				}
+		else if(ends_with(path, ".ief"))
+				{
+					m.mime = strdup("image/ief");
+
+				}
+		else if(ends_with(path, ".ifm"))
+				{
+					m.mime = strdup("image/gif");
+
+				}
+		else if(ends_with(path, ".ifs"))
+				{
+					m.mime = strdup("image/ifs");
+
+				}
+		else if(ends_with(path, ".qti"))
+				{
+					m.mime = strdup("image/x-quicktime");
+
+				}
+		else if(ends_with(path, ".qtif"))
+				{
+					m.mime = strdup("image/x-quicktime");
+
+				}
+		else if(ends_with(path, ".pnm"))
+				{
+					m.mime = strdup("image/x-portable-anymap");
+
+				}
+		else if(ends_with(path, ".ppm"))
+				{
+					m.mime = strdup("image/x-portable-pixmap");
+
+				}
+		else if(ends_with(path, ".bmp"))
+				{
+					m.mime = strdup("image/bmp");
+
+				}
+		else if(ends_with(path, ".cur"))
+				{
+					m.mime = strdup("application/octet-stream");
+
+				}
+		else if(ends_with(path, ".jpe"))
+				{
+					m.mime = strdup("image/jpeg");
+
+				}
+		else if(ends_with(path, ".psd"))
+				{
+					m.mime = strdup("application/octet-stream ");
+
+				}
+		else if(ends_with(path, ".svg"))
+				{
+					m.mime = strdup("image/image/svg-xml");
+
+				}
+		else if(ends_with(path, ".svgz"))
+				{
+					m.mime = strdup("image/svg+xml");
+
+				}
+		else
+		{
+			DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
+			return 0;
+		}
+
+
+		ret = sql_exec(db, "INSERT into DETAILS"
+		                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
+		                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
+		                   "VALUES"
+		                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+		                   path, full_name, (long long)file.st_size, file.st_mtime,NULL, "10x10",
+		                   NULL, 0, NULL,NULL, m.mime);
+	}
+#endif
+ 
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);
@@ -709,6 +933,11 @@ no_exifdata:
 int64_t
 GetVideoMetadata(const char *path, char *name)
 {
+#ifdef BAIDU_DMS_OPT
+	char full_name[64];
+	snprintf(full_name,sizeof(full_name),"%s",name);
+#endif
+	char fullpath[64],fullname[64],*name_b;
 	struct stat file;
 	int ret, i;
 	struct tm *modtime;
@@ -723,16 +952,13 @@ GetVideoMetadata(const char *path, char *name)
 	metadata_t m;
 	uint32_t free_flags = 0xFFFFFFFF;
 	char *path_cpy, *basepath;
-
 	memset(&m, '\0', sizeof(m));
 	memset(&video, '\0', sizeof(video));
 
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, "Parsing video %s...\n", name);
 	if ( stat(path, &file) != 0 )
 		return 0;
-#ifndef XIAODU_NAS
 	strip_ext(name);
-#endif
 	//DEBUG DPRINTF(E_DEBUG, L_METADATA, " * size: %jd\n", file.st_size);
 
 	ret = lav_open(&ctx, path);
@@ -907,6 +1133,37 @@ GetVideoMetadata(const char *path, char *name)
 #ifdef BAIDU_DMS_OPT
                 else if( strcmp(ctx->iformat->name, "rm") == 0 )
                         xasprintf(&m.mime, "video/x-pn-realvideo");
+                else if(ends_with(path, ".swf") )
+				 {
+					m.mime = strdup("application/x-shockwave-flash");
+
+				  }
+                else if( strcmp(ctx->iformat->name, "mpeg4") == 0 )
+                        xasprintf(&m.mime, "video/mpeg4");
+                else if( strcmp(ctx->iformat->name, ".wmx") == 0 )
+                        xasprintf(&m.mime, "video/x-ms-wmx");
+                else if( strcmp(ctx->iformat->name, "rmvb") == 0 )
+                        xasprintf(&m.mime, "application/vnd.rn-realmedia-vbr");
+                else if( strcmp(ctx->iformat->name, ".wm") == 0 )
+                        xasprintf(&m.mime, "video/x-ms-wm");
+                else if( strcmp(ctx->iformat->name, ".mpeg") == 0 )
+                        xasprintf(&m.mime, "video/mpg");
+                else if( strcmp(ctx->iformat->name, ".mpeg2") == 0 )
+                        xasprintf(&m.mime, "video/mpg");
+                else if( strcmp(ctx->iformat->name, ".mpga") == 0 )
+                        xasprintf(&m.mime, "audio/rn-mpeg");
+                else if( strcmp(ctx->iformat->name, ".qt") == 0 )
+                        xasprintf(&m.mime, "video/quicktime");
+                else if( strcmp(ctx->iformat->name, ".wmz") == 0 )
+                        xasprintf(&m.mime, "application/x-ms-wmz");
+                else if( strcmp(ctx->iformat->name, ".wmd") == 0 )
+                        xasprintf(&m.mime, "application/x-ms-wmd");
+                else if( strcmp(ctx->iformat->name, ".f4v") == 0 )
+                        xasprintf(&m.mime, "video/mp4");
+                else if( strcmp(ctx->iformat->name, ".ts") == 0 )
+                        xasprintf(&m.mime, "application/x-troll-ts");
+                else if( strcmp(ctx->iformat->name, ".wvx") == 0 )
+                        xasprintf(&m.mime, "video/x-ms-wvx");
 #endif
 		if( m.mime )
 			goto video_no_dlna;
@@ -1586,6 +1843,32 @@ video_no_dlna:
 #ifdef BAIDU_DMS_OPT
                 else if( strcmp(ctx->iformat->name, "rm") == 0 )
                         xasprintf(&m.mime, "video/x-pn-realvideo");
+                else if( strcmp(ctx->iformat->name, "mpeg4") == 0 )
+                        xasprintf(&m.mime, "video/mpeg4");
+                else if( strcmp(ctx->iformat->name, ".wmx") == 0 )
+                        xasprintf(&m.mime, "video/x-ms-wmx");
+                else if( strcmp(ctx->iformat->name, "rmvb") == 0 )
+                        xasprintf(&m.mime, "application/vnd.rn-realmedia-vbr");
+                else if( strcmp(ctx->iformat->name, ".wm") == 0 )
+                        xasprintf(&m.mime, "video/x-ms-wm");
+                else if( strcmp(ctx->iformat->name, ".mpeg") == 0 )
+                        xasprintf(&m.mime, "video/mpg");
+                else if( strcmp(ctx->iformat->name, ".mpeg2") == 0 )
+                        xasprintf(&m.mime, "video/mpg");
+                else if( strcmp(ctx->iformat->name, ".mpga") == 0 )
+                        xasprintf(&m.mime, "audio/rn-mpeg");
+                else if( strcmp(ctx->iformat->name, ".qt") == 0 )
+                        xasprintf(&m.mime, "video/quicktime");
+                else if( strcmp(ctx->iformat->name, ".wmz") == 0 )
+                        xasprintf(&m.mime, "application/x-ms-wmz");
+                else if( strcmp(ctx->iformat->name, ".wmd") == 0 )
+                        xasprintf(&m.mime, "application/x-ms-wmd");
+                else if( strcmp(ctx->iformat->name, ".f4v") == 0 )
+                        xasprintf(&m.mime, "video/mp4");
+                else if( strcmp(ctx->iformat->name, ".ts") == 0 )
+                        xasprintf(&m.mime, "application/x-troll-ts");
+                else if( strcmp(ctx->iformat->name, ".wvx") == 0 )
+                        xasprintf(&m.mime, "video/x-ms-wvx");
 #endif
 		else
 			DPRINTF(E_WARN, L_METADATA, "%s: Unhandled format: %s\n", path, ctx->iformat->name);
@@ -1604,7 +1887,7 @@ video_no_dlna:
 
 	album_art = find_album_art(path, video.image, video.image_size);
 	freetags(&video);
-
+#ifdef BAIDU_DMS_OPT
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
 	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART) "
@@ -1612,8 +1895,19 @@ video_no_dlna:
 	                   " (%Q, %lld, %ld, %Q, %Q, %Q, %Q, %Q, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
 	                   path, (long long)file.st_size, file.st_mtime, m.duration,
 	                   m.date, m.channels, m.bitrate, m.frequency, m.resolution,
-			   m.title, m.creator, m.artist, m.genre, m.comment, m.dlna_pn,
+			   full_name, m.creator, m.artist, m.genre, m.comment, m.dlna_pn,
                            m.mime, album_art);
+#else
+	ret = sql_exec(db, "INSERT into DETAILS"
+	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
+	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART) "
+	                   "VALUES"
+	                   " (%Q, %lld, %ld, %Q, %Q, %Q, %Q, %Q, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
+	                   path, (long long)file.st_size, file.st_mtime, m.duration,
+	                   m.date, m.channels, m.bitrate, m.frequency, m.resolution,
+			   name, m.creator, m.artist, m.genre, m.comment, m.dlna_pn,
+                           m.mime, album_art);
+#endif
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);

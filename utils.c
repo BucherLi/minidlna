@@ -322,7 +322,17 @@ DJBHash(const char *str, int len)
 
 	return hash;
 }
-
+#ifdef BAIDU_DMS_OPT
+char *
+title_to_ext(const char * title)
+{
+	char * period;
+	period = strrchr(title, '.');
+	if(period)
+		period++;
+	return period;
+}
+#endif
 const char *
 mime_to_ext(const char * mime)
 {
@@ -346,8 +356,24 @@ mime_to_ext(const char * mime)
 				return "pcm";
 			else if( strcmp(mime+6, "3gpp") == 0 )
 				return "3gp";
-			else if( strcmp(mime, "application/ogg") == 0 )
+			else if( strcmp(mime+6, "ogg") == 0 )
 				return "ogg";
+			else if( strcmp(mime, "audio/x-pn-realaudio") == 0 )
+				return "ra";
+			else if( strcmp(mime, "audio/aacp") == 0 )
+				return "aac+";
+			else if( strcmp(mime, "audio/eaacp") == 0 )
+				return "eaac+";
+			else if( strcmp(mime, "audio/amr") == 0 )
+				return "amr";
+			else if( strcmp(mime, "audio/mid") == 0 )
+				return "mid";
+			else if( strcmp(mime, "aaudio/mp2") == 0 )
+				return "mp2";
+			else if( strcmp(mime, "audio/aiff") == 0 )
+				return "aif";
+			else if( strcmp(mime, "audio/x-mpeg") == 0 )
+				return "mpega";
 			break;
 		case 'v':
 			if( strcmp(mime+6, "avi") == 0 )
@@ -375,6 +401,33 @@ mime_to_ext(const char * mime)
                             return "rm";
                         else if( strcmp(mime+6, "x-rmvb") == 0 )
                             return "rmvb";
+                       else if( strcmp(mime, "application/x-shockwave-flash") == 0 )
+                            return "swf";
+                        else if( strcmp(mime+6, "swf") == 0 )
+                            return "swf";
+                        else if( strcmp(mime+6, "video/mpeg4") == 0 )
+                            return "mpeg4";
+                        else if( strcmp(mime+6, "video/x-ms-wmx") == 0 )
+                            return "wmx";
+                        else if( strcmp(mime+6, "application/vnd.rn-realmedia-vbr") == 0 )
+                            return "rmvb";
+                        else if( strcmp(mime+6, "video/x-ms-wm") == 0 )
+                            return "wm";
+                        else if( strcmp(mime+6, "video/mpg") == 0 )
+                            return "mpeg";
+                        else if( strcmp(mime+6, "video/mpg") == 0 )
+                            return "mpeg2";
+                        else if( strcmp(mime+6, "video/quicktime") == 0 )
+                             return "qt";
+                        else if( strcmp(mime+6, "application/x-ms-wmz") == 0 )
+                             return "wmz";
+                        else if( strcmp(mime+6, "application/x-ms-wmd") == 0 )
+                             return "wmd";
+                        else if( strcmp(mime+6, "video/mp4") == 0 )
+                             return "f4v";
+                        else if( strcmp(mime+6, "application/x-troll-ts") == 0 )
+                              return "ts";
+
 #endif
                         else if( strcmp(mime+6, "vnd.dlna.mpeg-tts") == 0 )
 				return "mpg";
@@ -390,6 +443,30 @@ mime_to_ext(const char * mime)
 				return "jpg";
 			else if( strcmp(mime+6, "png") == 0 )
 				return "png";
+#ifdef BAIDU_DMS_OPT
+			else if( strcmp(mime+6, "gif") == 0)
+				return "gif";
+			else if( strcmp(mime+6, "png") == 0)
+				return "png";
+			else if( strcmp(mime+6, "ico") == 0)
+				return "ico";
+			else if( strcmp(mime+6, "pcb") == 0)
+				return "pcb";
+			else if( strcmp(mime+6, "pnm") == 0)
+				return "pnm";
+			else if( strcmp(mime+6, "ppm") == 0)
+				return "ppm";
+			else if( strcmp(mime+6, "qti") == 0)
+				return "qti";
+			else if( strcmp(mime+6, "qtf") == 0)
+				return "qtf";
+			else if( strcmp(mime+6, "qtif") == 0)
+				return "qtif";
+			else if( strcmp(mime+6, "tif") == 0)
+				return "tif";
+			else if( strcmp(mime+6, "tiff") == 0)
+				return "tiff";
+#endif
 			break;
 		default:
 			break;
@@ -410,6 +487,13 @@ is_video(const char * file)
 		ends_with(file, ".flv") || ends_with(file, ".xvid")  ||
 #ifdef BAIDU_DMS_OPT
                 ends_with(file, ".rm")  || ends_with(file, ".rmvb")  ||
+                ends_with(file, ".mpeg4")  || ends_with(file, ".swf")  ||
+                ends_with(file, ".wmx")  || ends_with(file, ".wm")  ||
+                ends_with(file, ".mpeg")  || ends_with(file, ".mpeg2")  ||
+                ends_with(file, ".mpga")  || ends_with(file, ".qt")  ||
+                ends_with(file, ".wmz")  || ends_with(file, ".wmd")  ||
+                ends_with(file, ".wmd")  || ends_with(file, ".f4v")  ||
+                ends_with(file, ".ts")  || ends_with(file, ".wvx")  ||
 #endif
 #ifdef TIVO_SUPPORT
 		ends_with(file, ".TiVo") ||
@@ -425,8 +509,15 @@ is_audio(const char * file)
 		ends_with(file, ".fla") || ends_with(file, ".flc")  ||
 		ends_with(file, ".m4a") || ends_with(file, ".aac")  ||
 		ends_with(file, ".mp4") || ends_with(file, ".m4p")  ||
-		ends_with(file, ".wav") || ends_with(file, ".ogg")  ||
-		ends_with(file, ".pcm") || ends_with(file, ".3gp"));
+		ends_with(file, ".pcm") || ends_with(file, ".3gp")  ||
+#ifdef BAIDU_DMS_OPT
+		ends_with(file, ".ra")  || ends_with(file, ".aac+") ||
+		ends_with(file, ".eaac+")|| ends_with(file, ".amr") ||
+		ends_with(file, ".mid") || ends_with(file, ".midi") ||
+		ends_with(file, ".mp2") || ends_with(file, ".aif")  ||
+		ends_with(file, ".mpega") || ends_with(file, ".ram")||
+#endif
+		ends_with(file, ".wav") || ends_with(file, ".ogg"));
 }
 
 int
@@ -434,7 +525,16 @@ is_image(const char * file)
 {
 #ifdef BAIDU_DMS_OPT
 	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg") ||
-			ends_with(file, ".png") );
+			ends_with(file, ".png") || ends_with(file,".gif")  ||
+			ends_with(file, ".ico") || ends_with(file,".ief")  ||
+			ends_with(file, ".ifm") || ends_with(file,".ifs")  ||
+			ends_with(file, ".ppm") || ends_with(file,".qtif") ||
+			ends_with(file, ".tif") || ends_with(file,".tiff") ||
+			ends_with(file, ".pcd") || ends_with(file,".qti")  ||
+			ends_with(file, ".qtf") || ends_with(file,".pnm")  ||
+			ends_with(file, ".bmp") || ends_with(file, ".psd") ||
+			ends_with(file, ".svg") || ends_with(file,".svgz") ||
+			ends_with(file, ".cur") || ends_with(file,".jpe"));
 #else
 	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg"));
 #endif

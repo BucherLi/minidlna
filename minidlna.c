@@ -514,6 +514,8 @@ init(int argc, char **argv)
 			j_tmp = cJSON_GetObjectItem(j_info, "deviceName");
 			if(j_tmp && cJSON_String == j_tmp->type && strlen(j_tmp->valuestring) > 0)
 				strcpy(friendly_name, j_tmp->valuestring);
+			else
+				strcpy(friendly_name, "Baidu AV-Router");
 		}
 		cJSON_Delete(j_info);
 	}else{
@@ -1025,6 +1027,7 @@ main(int argc, char **argv)
 		return 1;
 
 	DPRINTF(E_WARN, L_GENERAL, "Starting " SERVER_NAME " version " MINIDLNA_VERSION ".\n");
+	DPRINTF(E_WARN, L_GENERAL, "Starting XDU_NAS " MINIDLNA_BAIDU ".\n");
 	if (sqlite3_libversion_number() < 3005001)
 	{
 		DPRINTF(E_WARN, L_GENERAL, "SQLite library is old.  Please use version 3.5.1 or newer.\n");

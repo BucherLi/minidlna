@@ -871,7 +871,11 @@ callback(void *args, int argc, char **argv, char **azColName)
 			ret = strcatf(str, "&lt;upnp:originalTrackNumber&gt;%s&lt;/upnp:originalTrackNumber&gt;", track);
 		}
 		if( passed_args->filter & FILTER_RES ) {
+#ifdef BAIDU_DMS_OPT
+			ext = title_to_ext(title);
+#else
 			ext = mime_to_ext(mime);
+#endif
 			add_res(size, duration, bitrate, sampleFrequency, nrAudioChannels,
 			        resolution, dlna_buf, mime, detailID, ext, passed_args);
 			if( *mime == 'i' ) {

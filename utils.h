@@ -47,7 +47,9 @@ int is_playlist(const char * file);
 int is_album_art(const char * name);
 int resolve_unknown_type(const char * path, media_types dir_type);
 const char *mime_to_ext(const char * mime);
-
+#ifdef BAIDU_DMS_OPT
+char *title_to_ext(const char * title);
+#endif
 /* Others */
 int make_dir(char * path, mode_t mode);
 unsigned int DJBHash(const char *str, int len);

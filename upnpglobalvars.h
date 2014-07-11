@@ -56,8 +56,10 @@
 #include "config.h"
 
 #include <sqlite3.h>
-
 #define MINIDLNA_VERSION "1.1.2"
+#ifdef BAIDU_DMS_OPT
+#define MINIDLNA_BAIDU "V0.1.0.20140709"
+#endif
 
 #ifdef NETGEAR
 # define SERVER_NAME "ReadyDLNA"
