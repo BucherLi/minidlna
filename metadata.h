@@ -96,5 +96,11 @@ GetImageMetadata(const char *path, char *name);
 
 int64_t
 GetVideoMetadata(const char *path, char *name);
+#ifdef NAS
+int64_t
+GetTextMetadata(const char *path, char *name);
+int64_t
+GetAppMetadata(const char *path, char *name);
+#endif
 
 #endif

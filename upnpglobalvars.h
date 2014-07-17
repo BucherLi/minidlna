@@ -60,14 +60,13 @@
 #ifdef BAIDU_DMS_OPT
 #define MINIDLNA_BAIDU "V0.1.0.20140709"
 #endif
-
 #ifdef NETGEAR
 # define SERVER_NAME "ReadyDLNA"
 #else
 # define SERVER_NAME "MiniDLNA"
 #endif
 
-#define USE_FORK 1
+//#define USE_FORK 1
 #define DB_VERSION 9
 
 #ifdef ENABLE_NLS
@@ -226,7 +225,7 @@ extern int sssdp;
 extern const char *minissdpdsocketpath;
 
 /* UPnP-A/V [DLNA] */
-extern sqlite3 *db;
+extern sqlite3 *db,*db2;
 #define FRIENDLYNAME_MAX_LEN 64
 extern char friendly_name[];
 extern char db_path[];

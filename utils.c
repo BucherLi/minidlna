@@ -539,7 +539,26 @@ is_image(const char * file)
 	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg"));
 #endif
 }
+#ifdef NAS
+int
+is_text(const char * file)
+{
 
+	return (ends_with(file, ".txt") || ends_with(file, ".pdf") ||
+			ends_with(file, ".umd") || ends_with(file,".epub")  ||
+			ends_with(file, ".doc") || ends_with(file,".xls")  ||
+			ends_with(file, ".ppt") || ends_with(file,".docx")  ||
+			ends_with(file, ".xlsx") || ends_with(file,".pptx") ||
+			ends_with(file, ".chm") || ends_with(file,".html"));
+}
+int
+is_application(const char * file)
+{
+
+	return (ends_with(file, ".apk") || ends_with(file, ".exe") ||
+			ends_with(file, ".msi"));
+}
+#endif
 int
 is_playlist(const char * file)
 {

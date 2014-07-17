@@ -61,7 +61,13 @@
 #define OTHER_ID        "4"
 #define OTHER_ALL_ID		"4$1"
 #endif
+#ifdef NAS
+#define TEXT_ID        "4"
+#define TEXT_ALL_ID		"4$1"
 
+#define APP_ID			"5"
+#define APP_ALL_ID		"5$1"
+#endif
 extern int valid_cache;
 
 int
@@ -72,6 +78,12 @@ is_audio(const char *file);
 
 int
 is_image(const char *file);
+
+#ifdef NAS
+int
+is_text(const char *file);
+is_application(const char *file);
+#endif
 
 int64_t
 get_next_available_id(const char *table, const char *parentID);
@@ -84,6 +96,12 @@ insert_file(char *name, const char *path, const char *parentID, int object);
 
 int
 CreateDatabase(void);
+#ifdef NAS
+int
+CreateDatabase2(void);
+void
+start_scanner2();
+#endif
 
 void
 start_scanner();

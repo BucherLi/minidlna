@@ -43,6 +43,10 @@ void strip_ext(char * name);
 int is_video(const char * file);
 int is_audio(const char * file);
 int is_image(const char * file);
+#ifdef NAS
+int is_text(const char * file);
+int is_application(const char * file);
+#endif
 int is_playlist(const char * file);
 int is_album_art(const char * name);
 int resolve_unknown_type(const char * path, media_types dir_type);

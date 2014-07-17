@@ -324,7 +324,25 @@ GetFolderMetadata(const char *name, const char *path, const char *artist, const 
 
 	return ret;
 }
+#ifdef NAS
+int64_t
+GetFolderMetadata2(const char *name, const char *path, const char *artist, const char *genre, int64_t album_art)
+{
+	int ret;
 
+	ret = sql_exec(db2, "INSERT into DETAILS"
+	                   " (TITLE, PATH, CREATOR, ARTIST, GENRE, ALBUM_ART) "
+	                   "VALUES"
+	                   " ('%q', %Q, %Q, %Q, %Q, %lld);",
+	                   name, path, artist, artist, genre, album_art);
+	if( ret != SQLITE_OK )
+		ret = 0;
+	else
+		ret = sqlite3_last_insert_rowid(db2);
+
+	return ret;
+}
+#endif
 int64_t
 GetAudioMetadata(const char *path, char *name)
 {
@@ -933,7 +951,7 @@ no_exifdata:
 int64_t
 GetVideoMetadata(const char *path, char *name)
 {
-#ifdef BAIDU_STRIP_VIDEO
+#ifdef BAIDU_NO_STRIP_VIDEO
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
 	snprintf(full_name,sizeof(full_name),"%s",name);
@@ -2100,9 +2118,9 @@ video_no_dlna:
 #endif
 }
 
-#ifdef XIAODU_NAS
+#ifdef NAS
 int64_t
-GetOtherMetadata(const char *path, char *name)
+GetTextMetadata(const char *path, char *name)
 {
 	struct stat file;
 	int64_t	    ret;
@@ -2112,11 +2130,61 @@ GetOtherMetadata(const char *path, char *name)
 
 	if ( stat(path, &file) != 0 )
 		return 0;
-	//strip_ext(name);
-
-	m.mime = strdup("text/plain");
-
-	ret = sql_exec(db, "INSERT into DETAILS"
+	strip_ext(name);
+	if( ends_with(path, ".txt") )
+	{
+		m.mime = strdup("text/plain");
+	}
+	else if(ends_with(path, ".pdf") )
+	{
+		m.mime = strdup("application/pdf");
+	}
+	else if( ends_with(path, ".umd") )
+	{
+		m.mime = strdup("application/umd");
+	}
+	else if( ends_with(path, ".epub") )
+	{
+		m.mime = strdup("application/epub+zip");
+	}
+	else if(ends_with(path, ".doc") )
+	{
+		m.mime = strdup("application/msword");
+	}
+	else if( ends_with(path, ".xls") )
+	{
+		m.mime = strdup("application/vnd.ms-excel");
+	}
+	else if( ends_with(path, ".ppt") )
+	{
+		m.mime = strdup("application/vnd.ms-powerpoint");
+	}
+	else if(ends_with(path, ".docx") )
+	{
+		m.mime = strdup("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+	}
+	else if( ends_with(path, ".xlsx") )
+	{
+		m.mime = strdup("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+	}
+	else if( ends_with(path, ".pptx") )
+	{
+		m.mime = strdup("application/vnd.openxmlformats-officedocument.presentationml.presentation");
+	}
+	else if( ends_with(path, ".chm") )
+	{
+		m.mime = strdup("application/mshelp");
+	}
+	else if(ends_with(path, ".html") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else
+	{
+		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
+		return 0;
+	}
+	ret = sql_exec(db2, "INSERT into DETAILS"
 	                   " (PATH, TITLE, SIZE, TIMESTAMP, MIME) "
 	                   "VALUES"
 	                   " (%Q, '%q', %lld, %ld, %Q);",
@@ -2128,7 +2196,55 @@ GetOtherMetadata(const char *path, char *name)
 	}
 	else
 	{
-		ret = sqlite3_last_insert_rowid(db);
+		ret = sqlite3_last_insert_rowid(db2);
+	}
+	free_metadata(&m, free_flags);
+
+	return ret;
+}
+int64_t
+GetAppMetadata(const char *path, char *name)
+{
+	struct stat file;
+	int64_t	  ret;
+	metadata_t m;
+	uint32_t free_flags = 0xFFFFFFFF;
+	memset(&m, '\0', sizeof(metadata_t));
+
+	if ( stat(path, &file) != 0 )
+		return 0;
+	strip_ext(name);
+
+	if( ends_with(path, ".apk") )
+	{
+		m.mime = strdup("application/vnd.android.package-archive");
+	}
+	else if(ends_with(path, ".exe") )
+	{
+		m.mime = strdup("application/octet-stream");
+	}
+	else if( ends_with(path, ".msi") )
+	{
+		m.mime = strdup("application/octet-stream");
+	}
+	else
+	{
+		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
+		return 0;
+	}
+	ret = sql_exec(db2, "INSERT into DETAILS"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP, MIME) "
+	                   "VALUES"
+	                   " (%Q, '%q', %lld, %ld, %Q);",
+	                   path, name, (long long)file.st_size, file.st_mtime, m.mime);
+	if( ret != SQLITE_OK )
+	{
+		fprintf(stderr, "Error inserting details for '%s'!\n", path);
+		ret = 0;
+	}
+	else
+	{
+		ret = sqlite3_last_insert_rowid(db2);
 	}
 	free_metadata(&m, free_flags);
 

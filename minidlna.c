@@ -285,7 +285,6 @@ open_db(sqlite3 **sq3)
 {
 	char path[PATH_MAX];
 	int new_db = 0;
-
 	snprintf(path, sizeof(path), "%s/files.db", db_path);
 	if (access(path, F_OK) != 0)
 	{
@@ -304,7 +303,32 @@ open_db(sqlite3 **sq3)
 
 	return new_db;
 }
+#ifdef NAS
+static int
+open_db2(sqlite3 **sq3)
+{
+	char nas_path[PATH_MAX];
+	int new_db = 0;
+	snprintf(nas_path, sizeof(nas_path), "%s/nas.db", db_path);
+	if (access(nas_path, F_OK) != 0)
+	{
+		new_db = 1;
+		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
+	}
+	if (sqlite3_open(nas_path, &db2) != SQLITE_OK)
+		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open sqlite database!  Exiting...\n");
+	if (sq3)
+		*sq3 = db2;
+	sqlite3_busy_timeout(db2, 5000);
+	sql_exec(db2, "pragma page_size = 4096");
+	sql_exec(db2, "pragma journal_mode = OFF");
+	sql_exec(db2, "pragma synchronous = OFF;");
+	sql_exec(db2, "pragma default_cache_size = 8192;");
 
+	return new_db;
+}
+
+#endif
 static void
 check_db(sqlite3 *db, int new_db, pid_t *scanner_pid)
 {
@@ -392,7 +416,78 @@ rescan:
 #endif
 	}
 }
+#ifdef NAS
+static void
+check_db2(sqlite3 *db, int new_db, pid_t *scanner_pid)
+{
+	struct media_dir_s *media_path = NULL;
+	char cmd[PATH_MAX*2];
+	char **result;
+	int i, rows = 0;
+	int ret;
 
+	if (!new_db)
+	{
+		/* Check if any new media dirs appeared */
+		media_path = media_dirs;
+		while (media_path)
+		{
+			ret = sql_get_int_field(db, "SELECT TIMESTAMP from DETAILS where PATH = %Q", media_path->path);
+			if (ret != media_path->types)
+			{
+				ret = 1;
+				goto rescan;
+			}
+			media_path = media_path->next;
+		}
+		/* Check if any media dirs disappeared */
+		sql_get_table(db, "SELECT VALUE from SETTINGS where KEY = 'media_dir'", &result, &rows, NULL);
+		for (i=1; i <= rows; i++)
+		{
+			media_path = media_dirs;
+			while (media_path)
+			{
+				if (strcmp(result[i], media_path->path) == 0)
+					break;
+				media_path = media_path->next;
+			}
+			if (!media_path)
+			{
+				ret = 2;
+				sqlite3_free_table(result);
+				goto rescan;
+			}
+		}
+		sqlite3_free_table(result);
+	}
+
+	ret = db_upgrade(db);
+	if (ret != 0)
+	{
+rescan:
+		if (ret < 0)
+			DPRINTF(E_WARN, L_GENERAL, "Creating new database at %s/nas.db\n", db_path);
+		else if (ret == 1)
+			DPRINTF(E_WARN, L_GENERAL, "New media_dir detected; rescanning...\n");
+		else if (ret == 2)
+			DPRINTF(E_WARN, L_GENERAL, "Removed media_dir detected; rescanning...\n");
+		else
+			DPRINTF(E_WARN, L_GENERAL, "Database version mismatch; need to recreate...\n");
+		sqlite3_close(db);
+
+		snprintf(cmd, sizeof(cmd), "rm -rf %s/nas.db %s/art_cache", db_path, db_path);
+		if (system(cmd) != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "Failed to clean old file cache!  Exiting...\n");
+
+		open_db2(&db2);
+		if (CreateDatabase2() != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+
+	}
+	start_scanner2();
+}
+
+#endif
 static int
 writepidfile(const char *fname, int pid, uid_t uid)
 {
@@ -992,6 +1087,9 @@ init(int argc, char **argv)
 int
 main(int argc, char **argv)
 {
+#ifdef NAS
+	int ret_nas;
+#endif
 	int ret, i;
 	int shttpl = -1;
 	int smonitor = -1;
@@ -1034,7 +1132,16 @@ main(int argc, char **argv)
 	}
 
 	LIST_INIT(&upnphttphead);
-
+#ifdef NAS
+	ret = open_db2(NULL);
+	if (ret == 0)
+	{
+		updateID = sql_get_int_field(db2, "SELECT VALUE from SETTINGS where KEY = 'UPDATE_ID'");
+		if (updateID == -1)
+			ret = -1;
+	}
+	check_db2(db2, ret, &scanner_pid);
+#endif
 	ret = open_db(NULL);
 	if (ret == 0)
 	{
@@ -1043,6 +1150,7 @@ main(int argc, char **argv)
 			ret = -1;
 	}
 	check_db(db, ret, &scanner_pid);
+
 #ifdef HAVE_INOTIFY
 	if( GETFLAG(INOTIFY_MASK) )
 	{

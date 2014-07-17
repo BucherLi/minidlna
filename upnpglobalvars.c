@@ -81,7 +81,7 @@ int sssdp = -1;
 const char * minissdpdsocketpath = "/var/run/minissdpd.sock";
 
 /* UPnP-A/V [DLNA] */
-sqlite3 *db;
+sqlite3 *db,*db2;
 char friendly_name[FRIENDLYNAME_MAX_LEN];
 char db_path[PATH_MAX] = {'\0'};
 char log_path[PATH_MAX] = {'\0'};

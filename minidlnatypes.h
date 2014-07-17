@@ -65,6 +65,11 @@ typedef uint8_t media_types;
 #define TYPE_VIDEO   0x02
 #define TYPE_IMAGES  0x04
 #define ALL_MEDIA    TYPE_AUDIO|TYPE_VIDEO|TYPE_IMAGES
+#ifdef NAS
+#define TYPE_TEXT   0x01
+#define TYPE_APP	0x02
+#define ALL_FILE    TYPE_TEXT|TYPE_APP
+#endif
 #ifdef XIAODU_NAS
 #define TYPE_OTHER   0x08
 #define ALL_FILE	 ALL_MEDIA|TYPE_OTHER
