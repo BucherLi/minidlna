@@ -45,9 +45,6 @@
 #include "scanner.h"
 #include "albumart.h"
 #include "log.h"
-#ifdef NAS
-#include "minidlnatypes.h"
-#endif
 
 #if SCANDIR_CONST
 typedef const struct dirent scan_filter;
@@ -86,7 +83,6 @@ get_next_available_id(const char *table, const char *parentID)
 
 		return objectID;
 }
-
 int
 insert_container(const char *item, const char *rootParent, const char *refID, const char *class,
                  const char *artist, const char *genre, const char *album_art, int64_t *objectID, int64_t *parentID)
@@ -446,6 +442,48 @@ insert_directory(const char *name, const char *path, const char *base, const cha
 
 	return detailID;
 }
+#ifdef NAS
+void
+scan_Dir(char *path)  //main函数的argv[1] char * 作为 所需要遍历的路径 传参数给listDir
+ {
+         DIR              *pDir ;  //定义一个DIR类的指针
+         struct dirent    *ent  ;   //定义一个结构体 dirent的指针，dirent结构体见上
+         int               i=0  ;
+         char              childpath[PATH_MAX];  //定义一个字符数组，用来存放读取的路径
+         char				*full_path;
+         pDir=opendir(path); //  opendir方法打开path目录，并将地址付给pDir指针
+         memset(childpath,0,sizeof(childpath)); //将字符数组childpath的数组元素全部置零
+         full_path = malloc(PATH_MAX);
+       //  snprintf(childpath, PATH_MAX, "%s", path);
+         while((ent=readdir(pDir))!=NULL) //读取pDir打开的目录，并赋值给ent, 同时判断是否目录为空，不为空则执行循环体
+         {
+               if(ent->d_type & DT_DIR)  //读取 打开目录的文件类型 并与 DT_DIR进行位与运算操作，即如果读取的d_type类型为DT_DIR (=4 表示读取的为目录)
+               {
+                         if(strcmp(ent->d_name,".")==0 || strcmp(ent->d_name,"..")==0)//如果读取的d_name为.或者.. 表示读取的是当前目录符和上一目录符, 用contiue跳过，不进行下面的输出
+                                 continue;
+                         sprintf(childpath,"%s/%s",path,ent->d_name);  //如果非. ..则将 路径 和 文件名d_name 付给childpath, 并在下一行prinf输出
+                         scan_Dir(childpath);  //递归读取下层的字目录内容， 因为是递归，所以从外往里逐次输出所有目录（路径+目录名），
+                                            //然后才在else中由内往外逐次输出所有文件名
+               }
+               else  //如果读取的d_type类型不是 DT_DIR, 即读取的不是目录，而是文件，则直接输出 d_name, 即输出文件名
+               {
+            	   snprintf(full_path, PATH_MAX, "%s/%s", path, ent->d_name);
+            	   //printf("%s\n",full_path);
+            	   if(is_text(ent->d_name))
+            	  	{
+            	  	  GetTextMetadata(full_path,ent->d_name);
+            	  	}
+            	  	else if(is_application(ent->d_name))
+            	  	{
+            	  		GetAppMetadata(full_path, ent->d_name);
+            	  	}
+
+               }
+         }
+
+         free(full_path);
+ }
+#endif
 
 int
 insert_file(char *name, const char *path, const char *parentID, int object)
@@ -457,45 +495,7 @@ insert_file(char *name, const char *path, const char *parentID, int object)
 	char *typedir_parentID;
 	char *baseid;
 	char *orig_name = NULL;
-
-	if( is_image(name) )
-	{
-		if( is_album_art(name) )
-			return -1;
-		strcpy(base, IMAGE_DIR_ID);
-		strcpy(class, "item.imageItem.photo");
-		detailID = GetImageMetadata(path, name);
-	}
-	else if( is_video(name) )
-	{
- 		orig_name = strdup(name);
-		strcpy(base, VIDEO_DIR_ID);
-		strcpy(class, "item.videoItem");
-		detailID = GetVideoMetadata(path, name);
-		if( !detailID )
-			strcpy(name, orig_name);
-	}
-	else if( is_playlist(name) )
-	{
-		if( insert_playlist(path, name) == 0 )
-			return 1;
-	}
-	if( !detailID && is_audio(name) )
-	{
-		strcpy(base, MUSIC_DIR_ID);
-		strcpy(class, "item.audioItem.musicTrack");
-		detailID = GetAudioMetadata(path, name);
-	}
-#ifdef XIAODU_NAS
-	if( !detailID)
-	{
-		strcpy(class, "item.otherItem");
-		detailID = GetOtherMetadata(path, name);
-		//if( !detailID )
-		//	strcpy(name, orig_name);
-	}
-#endif
-#ifdef NAS
+/*#ifdef NAS
    if(is_text(name)||is_application(name))
  {   if(is_text(name))
 	{
@@ -536,9 +536,47 @@ insert_file(char *name, const char *path, const char *parentID, int object)
  	             " ('%s%s$%X', '%s%s', '%s', '%s', %lld, '%q')",
  	             base, parentID, object, base, parentID, objectID, class, detailID, name);
 
- 	//insert_containers(name, path, objectID, class, detailID);
+ 	return 0;
  }
+#endif*/
+	if( is_image(name) )
+	{
+		if( is_album_art(name) )
+			return -1;
+		strcpy(base, IMAGE_DIR_ID);
+		strcpy(class, "item.imageItem.photo");
+		detailID = GetImageMetadata(path, name);
+	}
+	else if( is_video(name) )
+	{
+ 		orig_name = strdup(name);
+		strcpy(base, VIDEO_DIR_ID);
+		strcpy(class, "item.videoItem");
+		detailID = GetVideoMetadata(path, name);
+		if( !detailID )
+			strcpy(name, orig_name);
+	}
+	else if( is_playlist(name) )
+	{
+		if( insert_playlist(path, name) == 0 )
+			return 1;
+	}
+	if( !detailID && is_audio(name) )
+	{
+		strcpy(base, MUSIC_DIR_ID);
+		strcpy(class, "item.audioItem.musicTrack");
+		detailID = GetAudioMetadata(path, name);
+	}
+#ifdef XIAODU_NAS
+	if( !detailID)
+	{
+		strcpy(class, "item.otherItem");
+		detailID = GetOtherMetadata(path, name);
+		//if( !detailID )
+		//	strcpy(name, orig_name);
+	}
 #endif
+
 	free(orig_name);
 	if( !detailID )
 	{
@@ -581,69 +619,10 @@ int
 CreateDatabase2(void)
 {
 	int ret, i;
-	const char *containers[] = { "0","-1",   "root",
-	                        MUSIC_ID, "0", _("Music"),
-	                    MUSIC_ALL_ID, MUSIC_ID, _("All Music"),
-	                  MUSIC_GENRE_ID, MUSIC_ID, _("Genre"),
-	                 MUSIC_ARTIST_ID, MUSIC_ID, _("Artist"),
-	                  MUSIC_ALBUM_ID, MUSIC_ID, _("Album"),
-	                    MUSIC_DIR_ID, MUSIC_ID, _("Folders"),
-	                  MUSIC_PLIST_ID, MUSIC_ID, _("Playlists"),
-
-	                        VIDEO_ID, "0", _("Video"),
-	                    VIDEO_ALL_ID, VIDEO_ID, _("All Video"),
-	                    VIDEO_DIR_ID, VIDEO_ID, _("Folders"),
-
-	                        IMAGE_ID, "0", _("Pictures"),
-	                    IMAGE_ALL_ID, IMAGE_ID, _("All Pictures"),
-	                   IMAGE_DATE_ID, IMAGE_ID, _("Date Taken"),
-	                 IMAGE_CAMERA_ID, IMAGE_ID, _("Camera"),
-	                    IMAGE_DIR_ID, IMAGE_ID, _("Folders"),
-
-	                    BROWSEDIR_ID, "0", _("Browse Folders"),
-			0 };
-
-	ret = sql_exec(db2, create_objectTable_sqlite);
+	ret = sql_exec(db2, create_NasTable_sqlite);
 	if( ret != SQLITE_OK )
 		goto sql_failed;
-	ret = sql_exec(db2, create_detailTable_sqlite);
-	if( ret != SQLITE_OK )
-		goto sql_failed;
-/*	ret = sql_exec(db2, create_albumArtTable_sqlite);
-	if( ret != SQLITE_OK )
-		goto sql_failed;
-	ret = sql_exec(db2, create_captionTable_sqlite);
-	if( ret != SQLITE_OK )
-		goto sql_failed;
-	ret = sql_exec(db2, create_bookmarkTable_sqlite);
-	if( ret != SQLITE_OK )
-		goto sql_failed;
-	ret = sql_exec(db2, create_playlistTable_sqlite);
-	if( ret != SQLITE_OK )
-		goto sql_failed;
-	ret = sql_exec(db2, create_settingsTable_sqlite);
-	if( ret != SQLITE_OK )
-		goto sql_failed;
-	ret = sql_exec(db2, "INSERT into SETTINGS values ('UPDATE_ID', '0')");
-	if( ret != SQLITE_OK )
-		goto sql_failed;*/
-	/*for( i=0; containers[i]; i=i+3 )
-	{
-		ret = sql_exec(db2, "INSERT into OBJECTS (OBJECT_ID, PARENT_ID, DETAIL_ID, CLASS, NAME)"
-		                   " values "
-		                   "('%s', '%s', %lld, 'container.storageFolder', '%q')",
-		                   containers[i], containers[i+1], GetFolderMetadata2(containers[i+2], NULL, NULL, NULL, 0), containers[i+2]);
-		if( ret != SQLITE_OK )
-			goto sql_failed;
-	}*/
-	sql_exec(db2, "create INDEX IDX_OBJECTS_OBJECT_ID ON OBJECTS(OBJECT_ID);");
-	sql_exec(db2, "create INDEX IDX_OBJECTS_PARENT_ID ON OBJECTS(PARENT_ID);");
-	sql_exec(db2, "create INDEX IDX_OBJECTS_DETAIL_ID ON OBJECTS(DETAIL_ID);");
-	sql_exec(db2, "create INDEX IDX_OBJECTS_CLASS ON OBJECTS(CLASS);");
-	sql_exec(db2, "create INDEX IDX_DETAILS_ID ON DETAILS(ID);");
-	sql_exec(db2, "create INDEX IDX_ALBUM_ART ON ALBUM_ART(ID);");
-	sql_exec(db2, "create INDEX IDX_SCANNER_OPT ON OBJECTS(PARENT_ID, NAME, OBJECT_ID);");
-
+	sql_exec(db2, "create INDEX IDX_Nas_ID ON DETAILS(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
 		fprintf(stderr, "Error creating SQLite3 database!\n");
@@ -975,96 +954,7 @@ ScanDirectory(const char *dir, const char *parent, media_types dir_types)
 		DPRINTF(E_WARN, L_SCANNER, _("Scanning %s finished (%llu files)!\n"), dir, fileno);
 	}
 }
-#ifdef NAS
-static void
-ScanDirectory2(const char *dir, const char *parent, media_types dir_types)
-{
-	struct dirent **namelist;
-	int i, n, startID = 0;
-	char *full_path;
-	char *name = NULL;
-	static long long unsigned int fileno = 0;
-	enum file_types type;
 
-	DPRINTF(parent?E_INFO:E_WARN, L_SCANNER, _("Scanning %s\n"), dir);
-	n = scandir(dir, &namelist, filter_te, alphasort);
-	/*switch( dir_types )
-	{
-
-	    case ALL_FILE:
-	    	n = scandir(dir, &namelist, filter_te, alphasort);
-	    	break;
-		case TYPE_TEXT:
-			n = scandir(dir,&namelist,filter_t,alphasort);
-		case TYPE_APP:
-			n = scandir(dir,&namelist,filter_e,alphasort);
-		default:
-			n = -1;
-			break;
-	}*/
-	if( n < 0 )
-	{
-		DPRINTF(E_WARN, L_SCANNER, "Error scanning %s\n", dir);
-		return;
-	}
-
-	full_path = malloc(PATH_MAX);
-	if (!full_path)
-	{
-		DPRINTF(E_ERROR, L_SCANNER, "Memory allocation failed scanning %s\n", dir);
-		return;
-	}
-
-	if( !parent )
-	{
-		startID = get_next_available_id("OBJECTS", BROWSEDIR_ID);
-	}
-
-	for (i=0; i < n; i++)
-	{
-#if !USE_FORK
-		if( quitting )
-			break;
-#endif
-		type = TYPE_UNKNOWN;
-		snprintf(full_path, PATH_MAX, "%s/%s", dir, namelist[i]->d_name);
-		name = escape_tag(namelist[i]->d_name, 1);
-		if( namelist[i]->d_type == DT_DIR )
-		{
-			type = TYPE_DIR;
-		}
-		else if( namelist[i]->d_type == DT_REG )
-		{
-			type = TYPE_FILE;
-		}
-		else
-		{
-			type = resolve_unknown_type(full_path, dir_types);
-		}
-		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) )
-		{
-			char *parent_id;
-			insert_directory(name, full_path, BROWSEDIR_ID, (parent ? parent:""), i+startID);
-			xasprintf(&parent_id, "%s$%X", (parent ? parent:""), i+startID);
-			ScanDirectory(full_path, parent_id, dir_types);
-			free(parent_id);
-		}
-		else if( type == TYPE_FILE && (access(full_path, R_OK) == 0) )
-		{
-			if( insert_file(name, full_path, (parent ? parent:""), i+startID) == 0 )
-				fileno++;
-		}
-		free(name);
-		free(namelist[i]);
-	}
-	free(namelist);
-	free(full_path);
-	if( !parent )
-	{
-		DPRINTF(E_WARN, L_SCANNER, _("Scanning %s finished (%llu files)!\n"), dir, fileno);
-	}
-}
-#endif
 static void
 _notify_start(void)
 {
@@ -1140,60 +1030,3 @@ start_scanner()
 	//JM: Set up a db version number, so we know if we need to rebuild due to a new structure.
 	sql_exec(db, "pragma user_version = %d;", DB_VERSION);
 }
-#ifdef NAS
-void
-start_scanner2()
-{
-	struct media_dir_s *media_path;
-	char path[MAXPATHLEN];
-
-	if (setpriority(PRIO_PROCESS, 0, 15) == -1)
-		DPRINTF(E_WARN, L_INOTIFY,  "Failed to reduce scanner thread priority\n");
-	_notify_start();
-
-	setlocale(LC_COLLATE, "");
-
-	av_register_all();
-	av_log_set_level(AV_LOG_PANIC);
-	for( media_path = media_dirs; media_path != NULL; media_path = media_path->next )
-	{
-		int64_t id;
-		char *bname, *parent = NULL;
-		char buf[8];
-		strncpyt(path, media_path->path, sizeof(path));
-		bname = basename(path);
-		/* If there are multiple media locations, add a level to the ContentDirectory */
-		if( media_dirs && media_dirs->next )
-		{
-			int startID = get_next_available_id("OBJECTS", BROWSEDIR_ID);
-			id = insert_directory(bname, path, BROWSEDIR_ID, "", startID);
-			sprintf(buf, "$%X", startID);
-			parent = buf;
-		}
-		else
-			id = GetFolderMetadata2(bname, media_path->path, NULL, NULL, 0);
-		/* Use TIMESTAMP to store the media type */
-		sql_exec(db2, "UPDATE DETAILS set TIMESTAMP = %d where ID = %lld", media_path->types, (long long)id);
-		ScanDirectory2(media_path->path, parent, media_path->types);
-		sql_exec(db2, "INSERT into SETTINGS values (%Q, %Q)", "media_dir", media_path->path);
-	}
-	_notify_stop();
-	/* Create this index after scanning, so it doesn't slow down the scanning process.
-	 * This index is very useful for large libraries used with an XBox360 (or any
-	 * client that uses UPnPSearch on large containers). */
-	sql_exec(db2, "create INDEX IDX_SEARCH_OPT ON OBJECTS(OBJECT_ID, CLASS, DETAIL_ID);");
-
-	if( GETFLAG(NO_PLAYLIST_MASK) )
-	{
-		DPRINTF(E_WARN, L_SCANNER, "Playlist creation disabled\n");
-	}
-	else
-	{
-		fill_playlists();
-	}
-
-	DPRINTF(E_DEBUG, L_SCANNER, "Initial file scan completed\n", DB_VERSION);
-	//JM: Set up a db version number, so we know if we need to rebuild due to a new structure.
-	sql_exec(db2, "pragma user_version = %d;", DB_VERSION);
-}
-#endif

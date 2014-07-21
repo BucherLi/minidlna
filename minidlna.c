@@ -478,13 +478,14 @@ rescan:
 		snprintf(cmd, sizeof(cmd), "rm -rf %s/nas.db %s/art_cache", db_path, db_path);
 		if (system(cmd) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "Failed to clean old file cache!  Exiting...\n");
-
-		open_db2(&db2);
+		open_db2(&db);
 		if (CreateDatabase2() != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 
 	}
-	start_scanner2();
+	 //start_scanner2();
+	scan_Dir(media_dirs->path);
+
 }
 
 #endif

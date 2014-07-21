@@ -2184,11 +2184,11 @@ GetTextMetadata(const char *path, char *name)
 		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
 		return 0;
 	}
-	ret = sql_exec(db2, "INSERT into DETAILS"
-	                   " (PATH, TITLE, SIZE, TIMESTAMP, MIME) "
+	ret = sql_exec(db2, "INSERT into Nas"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP_mtime, TIMESTAMP_ctime,MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld, %ld, %Q);",
-	                   path, name, (long long)file.st_size, file.st_mtime, m.mime);
+	                   " (%Q, '%q', %lld, %ld,%ld, %Q);",
+	                   path, name, (long long)file.st_size, file.st_mtime, file.st_ctime,m.mime);
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);
@@ -2232,11 +2232,11 @@ GetAppMetadata(const char *path, char *name)
 		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
 		return 0;
 	}
-	ret = sql_exec(db2, "INSERT into DETAILS"
-	                   " (PATH, TITLE, SIZE, TIMESTAMP, MIME) "
+	ret = sql_exec(db2, "INSERT into Nas"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP_mtime,TIMESTAMP_ctime, MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld, %ld, %Q);",
-	                   path, name, (long long)file.st_size, file.st_mtime, m.mime);
+	                   " (%Q, '%q', %lld, %ld, %ld,%Q);",
+	                   path, name, (long long)file.st_size, file.st_mtime,file.st_ctime,m.mime);
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);

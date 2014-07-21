@@ -101,6 +101,8 @@ int64_t
 GetTextMetadata(const char *path, char *name);
 int64_t
 GetAppMetadata(const char *path, char *name);
+int64_t
+GetFolderMetadata2(const char *name, const char *path, const char *artist, const char *genre, int64_t album_art);
 #endif
 
 #endif

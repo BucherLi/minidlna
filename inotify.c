@@ -293,7 +293,16 @@ inotify_insert_file(char * name, const char * path)
 	media_types types = ALL_MEDIA;
 	struct media_dir_s * media_path = media_dirs;
 	struct stat st;
-
+#ifdef NAS
+	 if(is_text(path))
+	 {
+	   GetTextMetadata(path,name);
+	 }
+	 else if(is_application(path))
+	 {
+	   GetAppMetadata(path, name);
+	 }
+#endif
 	/* Is it cover art for another file? */
 	if( is_image(path) )
 		update_if_album_art(path);
@@ -537,7 +546,20 @@ inotify_remove_file(const char * path)
 	char **result;
 	int64_t detailID;
 	int rows, playlist;
-
+	 printf("1:%d\n",detailID);
+#ifdef NAS
+   if(is_text(path)||is_application(path))
+ {
+	   printf("2:%d\n",detailID);
+	   id = sql_get_text_field(db2, "SELECT ID from %s where PATH = '%q'","Nas", path);
+	   printf("3:%s\n",id);
+	   if( !id )
+	   		return 1;
+	   	detailID = strtoll(id, NULL, 10);
+	   	sqlite3_free(id);
+	   	sql_exec(db2, "DELETE from Nas where ID = %lld", detailID);
+ }
+#endif
 	if( ends_with(path, ".srt") )
 	{
 		return sql_exec(db, "DELETE from CAPTIONS where PATH = '%q'", path);

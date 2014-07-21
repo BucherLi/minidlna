@@ -101,6 +101,8 @@ int
 CreateDatabase2(void);
 void
 start_scanner2();
+void
+scan_Dir(char *path);
 #endif
 
 void
