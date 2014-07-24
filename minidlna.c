@@ -483,9 +483,7 @@ rescan:
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 
 	}
-	 //start_scanner2();
 	scan_Dir(media_dirs->path);
-
 }
 
 #endif

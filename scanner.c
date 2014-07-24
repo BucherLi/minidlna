@@ -495,50 +495,6 @@ insert_file(char *name, const char *path, const char *parentID, int object)
 	char *typedir_parentID;
 	char *baseid;
 	char *orig_name = NULL;
-/*#ifdef NAS
-   if(is_text(name)||is_application(name))
- {   if(is_text(name))
-	{
-		strcpy(base, TEXT_ID);
-		strcpy(class, "item.textItem");
-		detailID = GetTextMetadata(path, name);
-	}
-	else if(is_application(name))
-	{
-		strcpy(base, APP_ID);
-		strcpy(class, "item.applicationItem");
-		detailID = GetAppMetadata(path, name);
-	}
- sprintf(objectID, "%s%s$%X", BROWSEDIR_ID, parentID, object);
-
- 	sql_exec(db2, "INSERT into OBJECTS"
- 	             " (OBJECT_ID, PARENT_ID, CLASS, DETAIL_ID, NAME) "
- 	             "VALUES"
- 	             " ('%s', '%s%s', '%s', %lld, '%q')",
- 	             objectID, BROWSEDIR_ID, parentID, class, detailID, name);
-
- 	if( *parentID )
- 	{
- 		int typedir_objectID = 0;
- 		typedir_parentID = strdup(parentID);
- 		baseid = strrchr(typedir_parentID, '$');
- 		if( baseid )
- 		{
- 			typedir_objectID = strtol(baseid+1, NULL, 16);
- 			*baseid = '\0';
- 		}
- 		insert_directory(name, path, base, typedir_parentID, typedir_objectID);
- 		free(typedir_parentID);
- 	}
- 	sql_exec(db2, "INSERT into OBJECTS"
- 	             " (OBJECT_ID, PARENT_ID, REF_ID, CLASS, DETAIL_ID, NAME) "
- 	             "VALUES"
- 	             " ('%s%s$%X', '%s%s', '%s', '%s', %lld, '%q')",
- 	             base, parentID, object, base, parentID, objectID, class, detailID, name);
-
- 	return 0;
- }
-#endif*/
 	if( is_image(name) )
 	{
 		if( is_album_art(name) )
@@ -618,7 +574,7 @@ insert_file(char *name, const char *path, const char *parentID, int object)
 int
 CreateDatabase2(void)
 {
-	int ret, i;
+	int ret;
 	ret = sql_exec(db2, create_NasTable_sqlite);
 	if( ret != SQLITE_OK )
 		goto sql_failed;
@@ -798,53 +754,6 @@ filter_avp(scan_filter *d)
 	       );
 }
 
-#ifdef XIAODU_NAS
-static int
-filter_dots(scan_filter *d)
-{
-	return ( (d->d_name[0] == '.') &&
-			 ( ( d->d_name[1] == '\0') || (d->d_name[1] == '.') )
-		   )? 0 : 1;
-}
-
-static int
-filter_o(scan_filter *d)
-{
-	return ( filter_dots(d) ||
-			!filter_avp(d)
-		   );
-}
-#endif
-#ifdef NAS
-static int
-filter_t(scan_filter *d)
-{
-	return ( filter_hidden(d) &&
-	         (filter_type(d) ||
-		  (d->d_type == DT_REG &&
-		   is_text(d->d_name)))
-	       );
-}
-static int
-filter_e(scan_filter *d)
-{
-	return ( filter_hidden(d) &&
-	         (filter_type(d) ||
-		  (d->d_type == DT_REG &&
-		   is_application(d->d_name)))
-	       );
-}
-static int
-filter_te(scan_filter *d)
-{
-	   	return ( filter_hidden(d) &&
-	   	         (filter_type(d) ||
-	   		  ((d->d_type == DT_REG) &&
-	   		   (is_text(d->d_name) ||
-	   	            is_application(d->d_name))))
-	   	       );
-}
-#endif
 static void
 ScanDirectory(const char *dir, const char *parent, media_types dir_types)
 {

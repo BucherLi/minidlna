@@ -516,11 +516,11 @@ GetAudioMetadata(const char *path, char *name)
 	album_art = find_album_art(path, song.image, song.image_size);
 
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
+	                   " (PATH, SIZE,TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
 	                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
 	                   "VALUES"
-	                   " (%Q, %lld, %ld, '%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
-	                   path, (long long)file.st_size, file.st_mtime, m.duration, song.channels, song.bitrate, song.samplerate, m.date,
+	                   " (%Q, %lld,%Q, %ld,%ld,'%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
+	                   path, (long long)file.st_size,"audio",file.st_mtime,file.st_ctime, m.duration, song.channels, song.bitrate, song.samplerate, m.date,
 	                   full_name, m.creator, m.artist, m.album, m.genre, m.comment, song.disc, song.track,
 	                   m.dlna_pn, song.mime?song.mime:m.mime, album_art);
 #else
@@ -612,11 +612,11 @@ GetAudioMetadata(const char *path, char *name)
 			return 0;
 		}
 	ret = sql_exec(db, "INSERT into DETAILS"
-		                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
+		                   " (PATH, SIZE,TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
 		                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
 		                   "VALUES"
-		                   " (%Q, %lld, %ld, '%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
-		                   path, (long long)file.st_size, file.st_mtime, NULL, NULL, NULL,NULL,NULL,
+		                   " (%Q, %lld,%Q,%ld,%ld,'%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
+		                   path, (long long)file.st_size,"audio",file.st_mtime,file.st_ctime, NULL, NULL, NULL,NULL,NULL,
 		                   full_name,NULL, NULL, NULL,NULL,NULL,0,0,NULL,m.mime, album_art);
   }
 #endif
@@ -803,11 +803,11 @@ no_exifdata:
 	xasprintf(&m.resolution, "%dx%d", width, height);
 #ifdef BAIDU_DMS_OPT
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
+	                   " (PATH, TITLE, SIZE, TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DATE, RESOLUTION,"
 	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
-	                   path, full_name, (long long)file.st_size, file.st_mtime, m.date, m.resolution,
+	                   " (%Q, '%q', %lld,%Q ,%ld,%ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+	                   path, full_name, (long long)file.st_size,"image",file.st_mtime,file.st_ctime ,m.date, m.resolution,
                     m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
 #else
 	ret = sql_exec(db, "INSERT into DETAILS"
@@ -925,11 +925,11 @@ no_exifdata:
 
 
 		ret = sql_exec(db, "INSERT into DETAILS"
-		                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
+		                   " (PATH, TITLE, SIZE,TYPE, TIMESTAMP_mtime,TIMESTAMP_ctime, DATE, RESOLUTION,"
 		                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 		                   "VALUES"
-		                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
-		                   path, full_name, (long long)file.st_size, file.st_mtime,NULL, "10x10",
+		                   " (%Q, '%q', %lld,%Q, %ld,%ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+		                   path, full_name, (long long)file.st_size,"image",file.st_mtime,file.st_ctime,NULL, "10x10",
 		                   NULL, 0, NULL,NULL, m.mime);
 	}
 #endif
@@ -2093,11 +2093,11 @@ video_no_dlna:
 		}
 	}
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
+	                   " (PATH, SIZE, TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
 	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART) "
 	                   "VALUES"
-	                   " (%Q, %lld, %ld, %Q, %Q, %Q, %Q, %Q, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
-	                   path, (long long)file.st_size, file.st_mtime,NULL,
+	                   " (%Q, %lld,%Q,%ld, %ld, %Q, %Q, %Q, %Q, %Q, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
+	                   path, (long long)file.st_size,"video" ,file.st_mtime,file.st_ctime,NULL,
 	                   NULL,  NULL, NULL, NULL, NULL,
 			   full_name, NULL, NULL, NULL, NULL, NULL,
                            m.mime, album_art);
@@ -2185,10 +2185,10 @@ GetTextMetadata(const char *path, char *name)
 		return 0;
 	}
 	ret = sql_exec(db2, "INSERT into Nas"
-	                   " (PATH, TITLE, SIZE, TIMESTAMP_mtime, TIMESTAMP_ctime,MIME) "
+	                   " (PATH, TITLE, SIZE,TYPE, TIMESTAMP_mtime, TIMESTAMP_ctime,MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld, %ld,%ld, %Q);",
-	                   path, name, (long long)file.st_size, file.st_mtime, file.st_ctime,m.mime);
+	                   " (%Q, '%q', %lld,%Q, %ld,%ld, %Q);",
+	                   path, name, (long long)file.st_size,"text", file.st_mtime, file.st_ctime,m.mime);
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);
@@ -2233,10 +2233,10 @@ GetAppMetadata(const char *path, char *name)
 		return 0;
 	}
 	ret = sql_exec(db2, "INSERT into Nas"
-	                   " (PATH, TITLE, SIZE, TIMESTAMP_mtime,TIMESTAMP_ctime, MIME) "
+	                   " (PATH, TITLE, SIZE,TYPE, TIMESTAMP_mtime,TIMESTAMP_ctime, MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld, %ld, %ld,%Q);",
-	                   path, name, (long long)file.st_size, file.st_mtime,file.st_ctime,m.mime);
+	                   " (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
+	                   path, name, (long long)file.st_size,"app", file.st_mtime,file.st_ctime,m.mime);
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);
