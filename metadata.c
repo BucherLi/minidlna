@@ -346,6 +346,24 @@ GetFolderMetadata2(const char *name, const char *path, const char *artist, const
 int64_t
 GetAudioMetadata(const char *path, char *name)
 {
+#ifdef NAS
+	int dir_count=0,num=0;
+	char full_dir[64];
+	snprintf(full_dir,sizeof(full_dir),"%s",path);
+	printf("full_dir:%s\n",full_dir);
+	while(full_dir[num] != '\0')
+	{
+		if(dir_count > 11){
+
+			return 0;
+		}
+
+		if('/'== full_dir[num]){
+			dir_count++;
+		}
+		num++;
+	}
+#endif
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
 	snprintf(full_name,sizeof(full_name),"%s",name);
@@ -648,6 +666,24 @@ libjpeg_error_handler(j_common_ptr cinfo)
 int64_t
 GetImageMetadata(const char *path, char *name)
 {
+#ifdef NAS
+	int dir_count=0,num=0;
+	char full_dir[64];
+	snprintf(full_dir,sizeof(full_dir),"%s",path);
+	printf("full_dir:%s\n",full_dir);
+	while(full_dir[num] != '\0')
+	{
+		if(dir_count > 11){
+
+			return 0;
+		}
+
+		if('/'== full_dir[num]){
+			dir_count++;
+		}
+		num++;
+	}
+#endif
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
 	snprintf(full_name,sizeof(full_name),"%s",name);
@@ -951,13 +987,32 @@ no_exifdata:
 int64_t
 GetVideoMetadata(const char *path, char *name)
 {
+#ifdef NAS
+	int dir_count=0,num=0;
+	char full_dir[64];
+	snprintf(full_dir,sizeof(full_dir),"%s",path);
+	printf("full_dir:%s\n",full_dir);
+	while(full_dir[num] != '\0')
+	{
+		if(dir_count > 11){
+
+			return 0;
+		}
+
+		if('/'== full_dir[num]){
+			dir_count++;
+		}
+		num++;
+	}
+#endif
+
 #ifdef BAIDU_NO_STRIP_VIDEO
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
 	snprintf(full_name,sizeof(full_name),"%s",name);
 #endif
 	struct stat file;
-	int ret, i;
+	int ret, i=0;
 	struct tm *modtime;
 	AVFormatContext *ctx = NULL;
 	AVCodecContext *ac = NULL, *vc = NULL;
@@ -2122,6 +2177,22 @@ video_no_dlna:
 int64_t
 GetTextMetadata(const char *path, char *name)
 {
+	int dir_count=0,i=0;
+	char full_dir[64];
+	snprintf(full_dir,sizeof(full_dir),"%s",path);
+	printf("full_dir:%s\n",full_dir);
+	while(full_dir[i] != '\0')
+	{
+		if(dir_count > 11){
+
+			return 0;
+		}
+
+		if('/'== full_dir[i]){
+			dir_count++;
+		}
+		i++;
+	}
 	struct stat file;
 	int64_t	    ret;
 	metadata_t m;
@@ -2210,6 +2281,22 @@ GetAppMetadata(const char *path, char *name)
 	metadata_t m;
 	uint32_t free_flags = 0xFFFFFFFF;
 	memset(&m, '\0', sizeof(metadata_t));
+	int dir_count=0,num=0;
+	char full_dir[64];
+	snprintf(full_dir,sizeof(full_dir),"%s",path);
+	printf("full_dir:%s\n",full_dir);
+	while(full_dir[num] != '\0')
+	{
+		if(dir_count > 11){
+
+			return 0;
+		}
+
+		if('/'== full_dir[num]){
+			dir_count++;
+		}
+		num++;
+	}
 
 	if ( stat(path, &file) != 0 )
 		return 0;

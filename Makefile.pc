@@ -211,7 +211,7 @@ AUTOMAKE = ${SHELL} /home/tiansm/minidlna/missing --run automake-1.11
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -DBAIDU_DMS_OPT
+CFLAGS = -g -DBAIDU_DMS_OPT -DNAS
 CPP = gcc -E
 CPPFLAGS = 
 CYGPATH_W = echo

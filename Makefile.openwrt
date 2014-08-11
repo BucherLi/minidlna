@@ -190,7 +190,7 @@ AWK = gawk
 CC = mipsel-openwrt-linux-gcc
 LD_LIBRARY_PATH = /opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -O2 -DBAIDU_DMS_OPT 
+CFLAGS = -g -O2 -DBAIDU_DMS_OPT -DNAS 
 CPP = mipsel-openwrt-linux-gcc -E
 CPPFLAGS = -I/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/include -I/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/include -I/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/include
 CYGPATH_W = echo
