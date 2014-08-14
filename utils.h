@@ -26,6 +26,12 @@
 
 #include "minidlnatypes.h"
 
+#ifdef NAS
+#define NETWORK_INTERFACE "eth0"
+void get_local_ip(char *interface, char *result, int n_result);
+#endif
+
+
 /* String functions */
 int strcatf(struct string_s *str, char *fmt, ...);
 void strncpyt(char *dst, const char *src, size_t len);

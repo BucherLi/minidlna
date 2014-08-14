@@ -578,7 +578,7 @@ CreateDatabase2(void)
 	ret = sql_exec(db2, create_NasTable_sqlite);
 	if( ret != SQLITE_OK )
 		goto sql_failed;
-	sql_exec(db2, "create INDEX IDX_Nas_ID ON DETAILS(ID);");
+	sql_exec(db2, "create INDEX IDX_Nas_ID ON nas(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
 		fprintf(stderr, "Error creating SQLite3 database!\n");

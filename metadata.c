@@ -2201,7 +2201,7 @@ GetTextMetadata(const char *path, char *name)
 
 	if ( stat(path, &file) != 0 )
 		return 0;
-	strip_ext(name);
+	//strip_ext(name);
 	if( ends_with(path, ".txt") )
 	{
 		m.mime = strdup("text/plain");
@@ -2300,7 +2300,7 @@ GetAppMetadata(const char *path, char *name)
 
 	if ( stat(path, &file) != 0 )
 		return 0;
-	strip_ext(name);
+	//strip_ext(name);
 
 	if( ends_with(path, ".apk") )
 	{
@@ -2313,6 +2313,18 @@ GetAppMetadata(const char *path, char *name)
 	else if( ends_with(path, ".msi") )
 	{
 		m.mime = strdup("application/octet-stream");
+	}
+	else if( ends_with(path, ".deb") )
+	{
+		m.mime = strdup("application/x-debian-package-archive");
+	}
+	else if( ends_with(path, ".ipa") )
+	{
+		m.mime = strdup("application/iphone-package-archive");
+	}
+	else if( ends_with(path, ".px") )
+	{
+		m.mime = strdup("application/x-ipix");
 	}
 	else
 	{

@@ -432,7 +432,7 @@ check_db2(sqlite3 *db, int new_db, pid_t *scanner_pid)
 		media_path = media_dirs;
 		while (media_path)
 		{
-			ret = sql_get_int_field(db, "SELECT TIMESTAMP from DETAILS where PATH = %Q", media_path->path);
+			ret = sql_get_int_field(db, "SELECT TIMESTAMP from nas where PATH = %Q", media_path->path);
 			if (ret != media_path->types)
 			{
 				ret = 1;
@@ -1133,12 +1133,14 @@ main(int argc, char **argv)
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
 	ret = open_db2(NULL);
+	/*
 	if (ret == 0)
 	{
 		updateID = sql_get_int_field(db2, "SELECT VALUE from SETTINGS where KEY = 'UPDATE_ID'");
 		if (updateID == -1)
 			ret = -1;
 	}
+	*/
 	check_db2(db2, ret, &scanner_pid);
 #endif
 	ret = open_db(NULL);

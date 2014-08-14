@@ -551,7 +551,7 @@ inotify_remove_file(const char * path)
    if(is_text(path)||is_application(path))
  {
 	   printf("2:%d\n",detailID);
-	   id = sql_get_text_field(db2, "SELECT ID from %s where PATH = '%q'","Nas", path);
+	   id = sql_get_text_field(db2, "SELECT ID from %s where PATH = '%q'","nas", path);
 	   printf("3:%s\n",id);
 	   if( !id )
 	   		return 1;
@@ -748,10 +748,15 @@ start_inotify()
 					else if( event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO) && st.st_size > 0 )
 					{
 						if( (event->mask & IN_MOVED_TO) ||
-						    (sql_get_int_field(db, "SELECT TIMESTAMP from DETAILS where PATH = '%q'", path_buf) != st.st_mtime) )
+						    (sql_get_int_field(db, "SELECT TIMESTAMP from DETAILS where PATH = '%q'", path_buf) != st.st_mtime)
+							|| (sql_get_int_field(db2, "SELECT TIMESTAMP_ctime from nas where PATH = '%q'", path_buf) != st.st_mtime) )
 						{
 							DPRINTF(E_DEBUG, L_INOTIFY, "The file %s was %s.\n",
 								path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "changed"));
+							if((event->mask & IN_MOVED_TO) != 1)
+							{
+								inotify_remove_file(path_buf);
+							}
 							inotify_insert_file(esc_name, path_buf);
 						}
 					}

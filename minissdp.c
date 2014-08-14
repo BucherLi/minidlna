@@ -41,6 +41,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#ifdef NAS
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include <net/if_arp.h>
+#include <string.h>
+#endif
 
 #include "minidlnapath.h"
 #include "upnphttp.h"
@@ -90,7 +99,9 @@ OpenAndConfSSDPReceiveSocket(void)
 	int s;
 	int i = 1;
 	struct sockaddr_in sockname;
-	
+#ifdef NAS
+	char local_ip[32];
+#endif
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 	if (s < 0)
 	{
@@ -105,8 +116,12 @@ OpenAndConfSSDPReceiveSocket(void)
 	sockname.sin_family = AF_INET;
 	sockname.sin_port = htons(SSDP_PORT);
 	/* NOTE : it seems it doesnt work when binding on the specific address */
+#ifdef NAS
+	get_local_ip(NETWORK_INTERFACE, local_ip, sizeof(local_ip));
+	sockname.sin_addr.s_addr = inet_addr(local_ip);
+#else
 	sockname.sin_addr.s_addr = htonl(INADDR_ANY);
-
+#endif
 	if (bind(s, (struct sockaddr *)&sockname, sizeof(struct sockaddr_in)) < 0)
 	{
 		DPRINTF(E_ERROR, L_SSDP, "bind(udp): %s\n", strerror(errno));

@@ -28,10 +28,35 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-
 #include "minidlnatypes.h"
 #include "upnpglobalvars.h"
 #include "log.h"
+
+#ifdef NAS
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include <net/if_arp.h>
+#include <string.h>
+#endif
+
+void get_local_ip(char *interface, char *result, int n_result)
+{
+    int fd;
+    struct ifreq ifr;
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    /* I want to get an IPv4 IP address */
+    ifr.ifr_addr.sa_family = AF_INET;
+    /* I want IP address attached to specified interface */
+    strncpy(ifr.ifr_name, interface, IFNAMSIZ-1);
+    ioctl(fd, SIOCGIFADDR, &ifr);
+    close(fd);
+    snprintf(result, n_result, "%s",
+        inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+     printf("Got local ip:  %s",  result);
+}
 
 inline int
 strcatf(struct string_s *str, const char *fmt, ...)
@@ -549,6 +574,17 @@ is_text(const char * file)
 			ends_with(file, ".doc") || ends_with(file,".xls")  ||
 			ends_with(file, ".ppt") || ends_with(file,".docx")  ||
 			ends_with(file, ".xlsx") || ends_with(file,".pptx") ||
+			ends_with(file, ".dot") || ends_with(file,".dotx") ||
+			ends_with(file, ".odm") || ends_with(file,".ots") ||
+			ends_with(file, ".ods") || ends_with(file,".rtf") ||
+			ends_with(file, ".xlt") || ends_with(file,".csv") ||
+			ends_with(file, ".pps") || ends_with(file,".ppsx") ||
+			ends_with(file, ".potx") || ends_with(file,".vsd") ||
+			ends_with(file, ".htm") || ends_with(file,".xml") ||
+			ends_with(file, ".xhtml") || ends_with(file,".vcf") ||
+			ends_with(file, ".vsdx") || ends_with(file,".mpp") ||
+			ends_with(file, ".mppx") || ends_with(file,".mpt") ||
+			ends_with(file, ".accd") || ends_with(file,".xps") ||
 			ends_with(file, ".chm") || ends_with(file,".html"));
 }
 int
@@ -556,7 +592,8 @@ is_application(const char * file)
 {
 
 	return (ends_with(file, ".apk") || ends_with(file, ".exe") ||
-			ends_with(file, ".msi"));
+			ends_with(file, ".ipa") || ends_with(file, ".px") ||
+			ends_with(file, ".deb") ||ends_with(file, ".msi"));
 }
 #endif
 int
