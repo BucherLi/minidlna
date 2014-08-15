@@ -328,6 +328,77 @@ open_db2(sqlite3 **sq3)
 	return new_db;
 }
 
+static int
+open_add_db(sqlite3 **sq3)
+{
+	char add_db_path[PATH_MAX];
+	int new_db = 0;
+	snprintf(add_db_path, sizeof(add_db_path), "%s/add.db", db_path);
+	if (access(add_db_path, F_OK) != 0)
+	{
+		new_db = 1;
+		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
+	}
+	if (sqlite3_open(add_db_path, &add_db) != SQLITE_OK)
+		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open add_sqlite_database!  Exiting...\n");
+	if (sq3)
+		*sq3 = add_db;
+	sqlite3_busy_timeout(add_db, 5000);
+	sql_exec(add_db, "pragma page_size = 4096");
+	sql_exec(add_db, "pragma journal_mode = OFF");
+	sql_exec(add_db, "pragma synchronous = OFF;");
+	sql_exec(add_db, "pragma default_cache_size = 8192;");
+
+	return new_db;
+}
+
+static int
+open_rm_db(sqlite3 **sq3)
+{
+	char rm_db_path[PATH_MAX];
+	int new_db = 0;
+	snprintf(rm_db_path, sizeof(rm_db_path), "%s/rm.db", db_path);
+	if (access(rm_db_path, F_OK) != 0)
+	{
+		new_db = 1;
+		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
+	}
+	if (sqlite3_open(rm_db_path, &rm_db) != SQLITE_OK)
+		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open rm_sqlite_database!  Exiting...\n");
+	if (sq3)
+		*sq3 = rm_db;
+	sqlite3_busy_timeout(db2, 5000);
+	sql_exec(rm_db, "pragma page_size = 4096");
+	sql_exec(rm_db, "pragma journal_mode = OFF");
+	sql_exec(rm_db, "pragma synchronous = OFF;");
+	sql_exec(rm_db, "pragma default_cache_size = 8192;");
+
+	return new_db;
+}
+
+static int
+open_update_db(sqlite3 **sq3)
+{
+	char update_db_path[PATH_MAX];
+	int new_db = 0;
+	snprintf(update_db_path, sizeof(update_db_path), "%s/update.db", db_path);
+	if (access(update_db_path, F_OK) != 0)
+	{
+		new_db = 1;
+		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
+	}
+	if (sqlite3_open(update_db_path, &update_db) != SQLITE_OK)
+		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open update_sqlite_database!  Exiting...\n");
+	if (sq3)
+		*sq3 = update_db;
+	sqlite3_busy_timeout(update_db, 5000);
+	sql_exec(update_db, "pragma page_size = 4096");
+	sql_exec(update_db, "pragma journal_mode = OFF");
+	sql_exec(update_db, "pragma synchronous = OFF;");
+	sql_exec(update_db, "pragma default_cache_size = 8192;");
+
+	return new_db;
+}
 #endif
 static void
 check_db(sqlite3 *db, int new_db, pid_t *scanner_pid)
@@ -484,6 +555,74 @@ rescan:
 
 	}
 	scan_Dir(media_dirs->path);
+}
+
+static void
+check_option_db(sqlite3 *db, int new_db)
+{
+	struct media_dir_s *media_path = NULL;
+	char cmd[PATH_MAX*2];
+	char **result;
+	int i, rows = 0;
+	int ret;
+
+	if (!new_db)
+	{
+		/* Check if any new media dirs appeared */
+		media_path = media_dirs;
+		while (media_path)
+		{
+			ret = sql_get_int_field(db, "SELECT TIMESTAMP from nas where PATH = %Q", media_path->path);
+			if (ret != media_path->types)
+			{
+				ret = 1;
+				goto rescan;
+			}
+			media_path = media_path->next;
+		}
+		/* Check if any media dirs disappeared */
+		sql_get_table(db, "SELECT VALUE from SETTINGS where KEY = 'media_dir'", &result, &rows, NULL);
+		for (i=1; i <= rows; i++)
+		{
+			media_path = media_dirs;
+			while (media_path)
+			{
+				if (strcmp(result[i], media_path->path) == 0)
+					break;
+				media_path = media_path->next;
+			}
+			if (!media_path)
+			{
+				ret = 2;
+				sqlite3_free_table(result);
+				goto rescan;
+			}
+		}
+		sqlite3_free_table(result);
+	}
+
+	ret = db_upgrade(db);
+	if (ret != 0)
+	{
+rescan:
+		if (ret < 0)
+			DPRINTF(E_WARN, L_GENERAL, "Creating new database at %s/nas.db\n", db_path);
+		else if (ret == 1)
+			DPRINTF(E_WARN, L_GENERAL, "New media_dir detected; rescanning...\n");
+		else if (ret == 2)
+			DPRINTF(E_WARN, L_GENERAL, "Removed media_dir detected; rescanning...\n");
+		else
+			DPRINTF(E_WARN, L_GENERAL, "Database version mismatch; need to recreate...\n");
+		sqlite3_close(db);
+
+		snprintf(cmd, sizeof(cmd), "rm -rf %s/nas.db %s/art_cache", db_path, db_path);
+		if (system(cmd) != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "Failed to clean old file cache!  Exiting...\n");
+		open_db2(&db);
+		if (CreateDatabase2() != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+
+	}
 }
 
 #endif
@@ -1133,6 +1272,29 @@ main(int argc, char **argv)
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
 	ret = open_db2(NULL);
+	if(ret !=0 ){
+		if (CreateDatabase2() != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+		//scan_Dir(media_dirs->path);
+	}
+	ret = open_add_db(NULL);
+	if(ret !=0 ){
+		if (CreateOptionDatabase(add_db) != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+		scan_Dir(media_dirs->path);
+	}
+	ret = open_rm_db(NULL);
+	if(ret !=0 ){
+		if (CreateOptionDatabase(rm_db) != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+	}
+	ret = open_update_db(NULL);
+	if(ret !=0 ){
+		if (CreateOptionDatabase(update_db) != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+	}
+
+
 	/*
 	if (ret == 0)
 	{
@@ -1141,7 +1303,12 @@ main(int argc, char **argv)
 			ret = -1;
 	}
 	*/
+	/*
 	check_db2(db2, ret, &scanner_pid);
+	check_db3(add_db, ret, &scanner_pid);
+	check_db3(rm_db, ret, &scanner_pid);
+	check_db3(update_db, ret, &scanner_pid);
+	*/
 #endif
 	ret = open_db(NULL);
 	if (ret == 0)
@@ -1449,6 +1616,10 @@ shutdown:
 
 	sql_exec(db, "UPDATE SETTINGS set VALUE = '%u' where KEY = 'UPDATE_ID'", updateID);
 	sqlite3_close(db);
+	sqlite3_close(db2);
+	sqlite3_close(add_db);
+	sqlite3_close(rm_db);
+	sqlite3_close(update_db);
 
 	upnpevents_removeSubscribers();
 

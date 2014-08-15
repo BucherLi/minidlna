@@ -82,6 +82,7 @@ is_image(const char *file);
 #ifdef NAS
 int
 is_text(const char *file);
+int
 is_application(const char *file);
 #endif
 
@@ -99,6 +100,8 @@ CreateDatabase(void);
 #ifdef NAS
 int
 CreateDatabase2(void);
+int
+CreateOptionDatabase(sqlite3 *db);
 void
 start_scanner2();
 void

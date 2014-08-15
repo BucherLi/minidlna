@@ -184,6 +184,10 @@
 /* startup time */
 extern time_t startup_time;
 
+#ifdef NAS
+extern int nas_timestamp;
+#endif
+
 extern struct runtime_vars_s runtime_vars;
 /* runtime boolean flags */
 extern uint32_t runtime_flags;
@@ -225,7 +229,7 @@ extern int sssdp;
 extern const char *minissdpdsocketpath;
 
 /* UPnP-A/V [DLNA] */
-extern sqlite3 *db,*db2;
+extern sqlite3 *db,*db2,*add_db,*rm_db,*update_db;
 #define FRIENDLYNAME_MAX_LEN 64
 extern char friendly_name[];
 extern char db_path[];

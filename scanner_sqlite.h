@@ -71,6 +71,17 @@ char create_NasTable_sqlite[] = "CREATE TABLE Nas ("
 					"TIMESTAMP_ctime INTEGER, "
 					"TITLE TEXT COLLATE NOCASE, "
                                         "MIME TEXT);";
+
+
+char create_change_state_Table_sqlite[] = "CREATE TABLE Nasoption ("
+					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					"PATH TEXT DEFAULT NULL, "
+					"SIZE INTEGER, "
+					"TYPE TEXT, "
+					"TIMESTAMP_ctime INTEGER, "
+					"TIMESTAMP INTEGER, "
+					"TITLE TEXT COLLATE NOCASE, "
+                                        "MIME TEXT);";
 #endif
 
 char create_albumArtTable_sqlite[] = "CREATE TABLE ALBUM_ART ("

@@ -483,6 +483,41 @@ scan_Dir(char *path)  //main函数的argv[1] char * 作为 所需要遍历的路
 
          free(full_path);
  }
+
+
+void
+scan_add_dir(char *path)  //main函数的argv[1] char * 作为 所需要遍历的路径 传参数给listDir
+ {
+         DIR              *pDir ;
+         struct dirent    *ent  ;
+         int               i=0  ;
+         char              childpath[PATH_MAX];  //定义一个字符数组，用来存放读取的路径
+         char				*full_path;
+         pDir=opendir(path);
+         memset(childpath,0,sizeof(childpath)); //将字符数组childpath的数组元素全部置零
+         full_path = malloc(PATH_MAX);
+       //  snprintf(childpath, PATH_MAX, "%s", path);
+         while((ent=readdir(pDir))!=NULL) //读取pDir打开的目录，并赋值给ent, 同时判断是否目录为空，不为空则执行循环体
+         {
+               if(ent->d_type & DT_DIR)  //读取 打开目录的文件类型 并与 DT_DIR进行位与运算操作，即如果读取的d_type类型为DT_DIR (=4 表示读取的为目录)
+               {
+                         if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0)
+                                 continue;
+                         sprintf(childpath,"%s/%s",path,ent->d_name);  //如果非. ..则将 路径 和 文件名d_name 付给childpath, 并在下一行prinf输出
+                         scan_Dir(childpath);  //递归读取下层的字目录内容， 因为是递归，所以从外往里逐次输出所有目录（路径+目录名），
+                                            //然后才在else中由内往外逐次输出所有文件名
+               }
+               else  //如果读取的d_type类型不是 DT_DIR, 即读取的不是目录，而是文件，则直接输出 d_name, 即输出文件名
+               {
+            	   snprintf(full_path, PATH_MAX, "%s/%s", path, ent->d_name);
+            	   //printf("%s\n",full_path);
+            	   GetAllFile(full_path, ent->d_name, 0);
+
+               }
+         }
+
+         free(full_path);
+ }
 #endif
 
 int
@@ -581,7 +616,21 @@ CreateDatabase2(void)
 	sql_exec(db2, "create INDEX IDX_Nas_ID ON nas(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
-		fprintf(stderr, "Error creating SQLite3 database!\n");
+		fprintf(stderr, "Error creating SQLite3 table!\n");
+	return (ret != SQLITE_OK);
+}
+
+int
+CreateOptionDatabase(sqlite3 *db)
+{
+	int ret;
+	ret = sql_exec(db, create_change_state_Table_sqlite);
+	if( ret != SQLITE_OK )
+		goto sql_failed;
+	sql_exec(db, "create INDEX IDX_Nas_option_ID ON nas(ID);");
+sql_failed:
+	if( ret != SQLITE_OK )
+		fprintf(stderr, "Error creating SQLite3 table!\n");
 	return (ret != SQLITE_OK);
 }
 

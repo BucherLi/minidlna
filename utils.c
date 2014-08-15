@@ -596,6 +596,149 @@ is_application(const char * file)
 			ends_with(file, ".deb") ||ends_with(file, ".msi"));
 }
 #endif
+
+#ifdef NAS
+char* getTextmime(char *name)
+{
+	char *mime;
+	if( ends_with(name, ".txt") )
+	{
+		mime = strdup("text/plain");
+	}
+	else if(ends_with(name, ".pdf") )
+	{
+		mime = strdup("application/pdf");
+	}
+	else if( ends_with(name, ".umd") )
+	{
+		mime = strdup("application/umd");
+	}
+	else if( ends_with(name, ".epub") )
+	{
+		mime = strdup("application/epub+zip");
+	}
+	else if(ends_with(name, ".doc") )
+	{
+		mime = strdup("application/msword");
+	}
+	else if( ends_with(name, ".xls") )
+	{
+		mime = strdup("application/vnd.ms-excel");
+	}
+	else if( ends_with(name, ".ppt") )
+	{
+		mime = strdup("application/vnd.ms-powerpoint");
+	}
+	else if(ends_with(name, ".docx") )
+	{
+		mime = strdup("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+	}
+	else if( ends_with(name, ".xlsx") )
+	{
+		mime = strdup("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+	}
+	else if( ends_with(name, ".pptx") )
+	{
+		mime = strdup("application/vnd.openxmlformats-officedocument.presentationml.presentation");
+	}
+	else if( ends_with(name, ".chm") )
+	{
+		mime = strdup("application/mshelp");
+	}
+	else if(ends_with(name, ".html") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".dot") )
+	{
+		mime = strdup("application/msword");
+	}
+	else if(ends_with(name, ".dotx") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".odm") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".ots") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".ods") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".odt") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".rtf") )
+	{
+		mime = strdup("application/rtf");
+	}
+	else if(ends_with(name, ".xlt") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".xltx") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".csv") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".pps") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".ppsx") )
+	{
+		mime = strdup("text/html");
+	}
+	else if(ends_with(name, ".potx") )
+	{
+		mime = strdup("text/html");
+	}
+	return mime;
+}
+
+char* getAppmime(char *name)
+{
+	char *mime;
+	if( ends_with(name, ".apk") )
+	{
+		mime = strdup("application/vnd.android.package-archive");
+	}
+	else if(ends_with(name, ".exe") )
+	{
+		mime = strdup("application/octet-stream");
+	}
+	else if( ends_with(name, ".msi") )
+	{
+		mime = strdup("application/octet-stream");
+	}
+	else if( ends_with(name, ".deb") )
+	{
+		mime = strdup("application/x-debian-package-archive");
+	}
+	else if( ends_with(name, ".ipa") )
+	{
+		mime = strdup("application/iphone-package-archive");
+	}
+	else if( ends_with(name, ".px") )
+	{
+		mime = strdup("application/x-ipix");
+	}
+	else
+	{
+		mime = strdup("other");
+	}
+	return mime;
+}
+#endif
+
 int
 is_playlist(const char * file)
 {

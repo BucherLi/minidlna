@@ -79,6 +79,13 @@ typedef enum {
 	VALID
 } ts_timestamp_t;
 
+#ifdef NAS
+typedef enum {
+	add,
+	rm,
+	change
+} OPTION;
+#endif
 int
 ends_with(const char *haystack, const char *needle);
 
@@ -102,7 +109,7 @@ GetTextMetadata(const char *path, char *name);
 int64_t
 GetAppMetadata(const char *path, char *name);
 int64_t
-GetFolderMetadata2(const char *name, const char *path, const char *artist, const char *genre, int64_t album_art);
+GetAllFile(const char *path, char *name, OPTION option);
 #endif
 
 #endif

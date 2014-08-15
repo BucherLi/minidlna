@@ -2250,6 +2250,58 @@ GetTextMetadata(const char *path, char *name)
 	{
 		m.mime = strdup("text/html");
 	}
+	else if(ends_with(path, ".dot") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".dotx") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".odm") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".ots") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".ods") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".odt") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".rtf") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".xlt") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".xltx") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".csv") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".pps") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".ppsx") )
+	{
+		m.mime = strdup("text/html");
+	}
+	else if(ends_with(path, ".potx") )
+	{
+		m.mime = strdup("text/html");
+	}
 	else
 	{
 		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
@@ -2347,6 +2399,98 @@ GetAppMetadata(const char *path, char *name)
 	}
 	free_metadata(&m, free_flags);
 
+	return ret;
+}
+
+int64_t
+GetAllFile(const char *path, char *name, OPTION option)
+{
+	struct stat file;
+	int64_t	  ret;
+	char *mime = NULL;
+	int dir_count=0,num=0;
+	char file_type[16];
+	char full_dir[64];
+	snprintf(full_dir,sizeof(full_dir),"%s",path);
+	printf("full_dir:%s\n",full_dir);
+	nas_timestamp++;
+	while(full_dir[num] != '\0')
+	{
+		if(dir_count > 11){
+
+			return 0;
+		}
+
+		if('/'== full_dir[num]){
+			dir_count++;
+		}
+		num++;
+	}
+	if ( stat(path, &file) != 0 )
+	{
+		free(mime);
+		return 0;
+	}
+	mime = getmime(name);
+	if(is_video(name))
+	{
+		snprintf(file_type,sizeof(file_type),"%s","vedio");
+	}
+	else if(is_audio(name))
+	{
+		snprintf(file_type,sizeof(file_type),"%s","audio");
+	}
+	else if(is_image(name))
+	{
+		snprintf(file_type,sizeof(file_type),"%s","image");
+	}
+	else if(is_application(name))
+	{
+		snprintf(file_type,sizeof(file_type),"%s","app");
+	}
+	else
+	{
+		snprintf(file_type,sizeof(file_type),"%s","other");
+	}
+	switch (option)
+	{
+	case add:
+		ret = sql_exec(add_db, "INSERT into Nas"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, MIME) "
+				"VALUES"
+				" (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime,nas_timestamp,m.mime);
+				break;
+	case rm:
+	ret = sql_exec(rm_db, "INSERT into Nas"
+			" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, MIME) "
+			"VALUES"
+			" (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
+			path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp,m.mime);
+			break;
+	case change:
+		ret = sql_exec(update_db, "INSERT into Nas"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, MIME) "
+				"VALUES"
+				" (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp,m.mime);
+		break;
+	default :
+		DPRINTF(E_WARN, L_GENERAL, "reset option state \n");
+		break;
+	}
+
+	;
+	if( ret != SQLITE_OK )
+	{
+		fprintf(stderr, "Error inserting details for '%s'!\n", path);
+		ret = 0;
+	}
+	else
+	{
+		ret = sqlite3_last_insert_rowid(db2);
+	}
+	free(mime);
 	return ret;
 }
 #endif
