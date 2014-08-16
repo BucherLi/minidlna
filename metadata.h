@@ -85,6 +85,11 @@ typedef enum {
 	rm,
 	change
 } OPTION;
+
+typedef enum {
+	is_dir,
+	not_dir
+} NAS_DIR;
 #endif
 int
 ends_with(const char *haystack, const char *needle);
@@ -109,7 +114,9 @@ GetTextMetadata(const char *path, char *name);
 int64_t
 GetAppMetadata(const char *path, char *name);
 int64_t
-GetAllFile(const char *path, char *name, OPTION option);
+GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir);
+int
+nas_inotify_update_file(const char * path , const char * name,NAS_DIR dir);
 #endif
 
 #endif

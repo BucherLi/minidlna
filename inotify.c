@@ -293,7 +293,7 @@ inotify_insert_file(char * name, const char * path)
 	media_types types = ALL_MEDIA;
 	struct media_dir_s * media_path = media_dirs;
 	struct stat st;
-#ifdef NAS
+#ifdef NAS_no
 	 if(is_text(path))
 	 {
 	   GetTextMetadata(path,name);
@@ -535,6 +535,110 @@ inotify_insert_directory(int fd, char *name, const char * path)
 
 	return 0;
 }
+#ifdef NAS
+int
+nas_inotify_insert_directory(int fd, char *name, const char * path)
+{
+	DIR * ds;
+	struct dirent * e;
+	char *id, *parent_buf, *esc_name;
+	char path_buf[PATH_MAX];
+	int wd;
+	enum file_types type = TYPE_UNKNOWN;
+	media_types dir_types = ALL_MEDIA;
+	struct media_dir_s* media_path;
+	struct stat st;
+
+	if( access(path, R_OK|X_OK) != 0 )
+	{
+		DPRINTF(E_WARN, L_INOTIFY, "Could not access %s [%s]\n", path, strerror(errno));
+		return -1;
+	}
+	if( sql_get_int_field(add_db, "SELECT ID from nasoption where PATH = '%q'", path) > 0 )
+	{
+		DPRINTF(E_DEBUG, L_INOTIFY, "%s already exists\n", path);
+		return 0;
+	}
+
+	GetAllFile( path,  name, 0, 0);
+	wd = add_watch(fd, path);
+	if( wd == -1 )
+	{
+		DPRINTF(E_ERROR, L_INOTIFY, "add_watch() failed\n");
+	}
+	else
+	{
+		DPRINTF(E_INFO, L_INOTIFY, "Added watch to %s [%d]\n", path, wd);
+	}
+	scan_add_dir(path);
+	/*ds = opendir(path);
+	if( !ds )
+	{
+		DPRINTF(E_ERROR, L_INOTIFY, "opendir failed! [%s]\n", strerror(errno));
+		return -1;
+	}
+	while( (e = readdir(ds)) )
+	{
+		if( e->d_name[0] == '.' )
+			continue;
+		esc_name = escape_tag(e->d_name, 1);
+		snprintf(path_buf, sizeof(path_buf), "%s/%s", path, e->d_name);
+
+		if( type == TYPE_DIR )
+		{
+			nas_inotify_insert_directory(fd, esc_name, path_buf);
+		}
+		else if( type == TYPE_FILE )
+		{
+			if( (stat(path_buf, &st) == 0) && (st.st_blocks<<9 >= st.st_size) )
+			{
+				GetAllFile(path_buf, esc_name, 0, 1);
+			}
+		}
+		free(esc_name);
+	}
+	closedir(ds);*/
+
+	return 0;
+}
+#endif
+#ifdef NAS
+int
+nas_inotify_remove_file(const char * path , const char * name,NAS_DIR dir)
+{
+	char *id = NULL;
+	char *title = NULL;
+	int64_t detailID = 0;
+	//title = sql_get_text_field(add_db, "SELECT TITLE from %s where PATH = '%q'","nasoption", path);
+	GetAllFile(path, name, 1, dir);
+	printf("detailID:%ld\n",detailID);
+	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasoption", path);
+	if( !id )
+		return 1;
+	detailID = strtoll(id, NULL, 10);
+	sqlite3_free(id);
+	sqlite3_free(title);
+	sql_exec(add_db, "DELETE from Nasoption where ID = %lld", detailID);
+	return 0;
+}
+int
+nas_inotify_update_file(const char * path , const char * name,NAS_DIR dir)
+{
+	char *id = NULL;
+	char *title = NULL;
+	int64_t detailID = 0;
+	//GetAllFile(path, name, 1, dir);
+	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasoption", path);
+	if( !id )
+		return 1;
+	detailID = strtoll(id, NULL, 10);
+	sqlite3_free(id);
+	sqlite3_free(title);
+	GetAllFile(path, name, 2, dir);
+	sql_exec(add_db, "DELETE from Nasoption where ID = %lld", detailID);
+	return 0;
+}
+#endif
 
 int
 inotify_remove_file(const char * path)
@@ -544,13 +648,12 @@ inotify_remove_file(const char * path)
 	char *id;
 	char *ptr;
 	char **result;
-	int64_t detailID;
+	int64_t detailID = 0;
 	int rows, playlist;
-	 printf("1:%d\n",detailID);
-#ifdef NAS
+#ifdef NAS_no
    if(is_text(path)||is_application(path))
  {
-	   printf("2:%d\n",detailID);
+	   printf("2:%ld\n",detailID);
 	   id = sql_get_text_field(db2, "SELECT ID from %s where PATH = '%q'","nas", path);
 	   printf("3:%s\n",id);
 	   if( !id )
@@ -660,7 +763,43 @@ inotify_remove_directory(int fd, const char * path)
 
 	return ret;
 }
+#ifdef NAS
+int
+nas_inotify_remove_directory(int fd, const char * path)
+{
+	char * sql;
+	char **result;
+	char *fullpath = NULL;
+	char *title = NULL;
+	int64_t detailID = 0;
+	int rows, i, ret = 1;
 
+
+	/* Invalidate the scanner cache so we don't insert files into non-existent containers */
+	valid_cache = 0;
+	remove_watch(fd, path);
+	sql = sqlite3_mprintf("SELECT ID from nasoption where (PATH > '%q/' and PATH <= '%q/%c')"
+	                      " or PATH = '%q'", path, path, 0xFF, path);
+	if( (sql_get_table(add_db, sql, &result, &rows, NULL) == SQLITE_OK) )
+	{
+		if( rows )
+		{
+			for( i=1; i <= rows; i++ )
+			{
+				detailID = strtoll(result[i], NULL, 10);
+				fullpath = sql_get_text_field(add_db, "SELECT PATH from %s where ID = %lld","nasoption", detailID);
+				title = sql_get_text_field(add_db, "SELECT TITLE from %s where ID = %lld","nasoption", detailID);
+				GetAllFile(fullpath, title, 1, 0);
+				sql_exec(add_db, "DELETE from nasoption where ID = %lld", detailID);
+			}
+			ret = 0;
+		}
+		sqlite3_free_table(result);
+	}
+	sqlite3_free(sql);
+	return ret;
+}
+#endif
 void *
 start_inotify()
 {
@@ -732,6 +871,9 @@ start_inotify()
 					DPRINTF(E_DEBUG, L_INOTIFY,  "The directory %s was %s.\n",
 						path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
 					inotify_insert_directory(pollfds[0].fd, esc_name, path_buf);
+#ifdef NAS
+					nas_inotify_insert_directory(pollfds[0].fd, esc_name, path_buf);
+#endif
 				}
 				else if ( (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO|IN_CREATE)) &&
 				          (lstat(path_buf, &st) == 0) )
@@ -740,23 +882,36 @@ start_inotify()
 					{
 						DPRINTF(E_DEBUG, L_INOTIFY, "The symbolic link %s was %s.\n",
 							path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
-						if( stat(path_buf, &st) == 0 && S_ISDIR(st.st_mode) )
+						if( stat(path_buf, &st) == 0 && S_ISDIR(st.st_mode) ){
 							inotify_insert_directory(pollfds[0].fd, esc_name, path_buf);
-						else
+#ifdef NAS
+							nas_inotify_insert_directory(pollfds[0].fd, esc_name, path_buf);
+						}else{
+#endif
 							inotify_insert_file(esc_name, path_buf);
+						}
+
 					}
 					else if( event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO) && st.st_size > 0 )
 					{
 						if( (event->mask & IN_MOVED_TO) ||
 						    (sql_get_int_field(db, "SELECT TIMESTAMP from DETAILS where PATH = '%q'", path_buf) != st.st_mtime)
-							|| (sql_get_int_field(db2, "SELECT TIMESTAMP_ctime from nas where PATH = '%q'", path_buf) != st.st_mtime) )
+							|| (sql_get_int_field(add_db, "SELECT TIMESTAMP_ctime from nas where PATH = '%q'", path_buf) != st.st_mtime) )
 						{
 							DPRINTF(E_DEBUG, L_INOTIFY, "The file %s was %s.\n",
 								path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "changed"));
-							if((event->mask & IN_MOVED_TO) != 1)
+							if((event->mask & IN_MOVED_TO) > 0 )
 							{
-								inotify_remove_file(path_buf);
+								printf("[notify.c 888]name:%s\n",esc_name);
+								GetAllFile(path_buf, esc_name, 0, 1);
+
 							}
+#ifdef NAS
+							else
+							{
+								printf("[notify.c 895]name:%s\n",esc_name);
+							}
+#endif
 							inotify_insert_file(esc_name, path_buf);
 						}
 					}
@@ -766,10 +921,17 @@ start_inotify()
 					DPRINTF(E_DEBUG, L_INOTIFY, "The %s %s was %s.\n",
 						(event->mask & IN_ISDIR ? "directory" : "file"),
 						path_buf, (event->mask & IN_MOVED_FROM ? "moved away" : "deleted"));
-					if ( event->mask & IN_ISDIR )
+					if ( event->mask & IN_ISDIR ){
 						inotify_remove_directory(pollfds[0].fd, path_buf);
-					else
+#ifdef NAS
+						nas_inotify_remove_directory(pollfds[0].fd, path_buf);
+#endif
+					}else{
+#ifdef NAS
+						nas_inotify_remove_file(path_buf,esc_name,1);
+#endif
 						inotify_remove_file(path_buf);
+					}
 				}
 				free(esc_name);
 			}

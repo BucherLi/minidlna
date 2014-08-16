@@ -2403,7 +2403,7 @@ GetAppMetadata(const char *path, char *name)
 }
 
 int64_t
-GetAllFile(const char *path, char *name, OPTION option)
+GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 {
 	struct stat file;
 	int64_t	  ret;
@@ -2412,8 +2412,8 @@ GetAllFile(const char *path, char *name, OPTION option)
 	char file_type[16];
 	char full_dir[64];
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s\n",full_dir);
 	nas_timestamp++;
+	printf("full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
 	while(full_dir[num] != '\0')
 	{
 		if(dir_count > 11){
@@ -2426,12 +2426,8 @@ GetAllFile(const char *path, char *name, OPTION option)
 		}
 		num++;
 	}
-	if ( stat(path, &file) != 0 )
-	{
-		free(mime);
-		return 0;
-	}
-	mime = getmime(name);
+
+	//mime = getmime(name);
 	if(is_video(name))
 	{
 		snprintf(file_type,sizeof(file_type),"%s","vedio");
@@ -2444,6 +2440,10 @@ GetAllFile(const char *path, char *name, OPTION option)
 	{
 		snprintf(file_type,sizeof(file_type),"%s","image");
 	}
+	else if(is_text(name))
+	{
+		snprintf(file_type,sizeof(file_type),"%s","text");
+	}
 	else if(is_application(name))
 	{
 		snprintf(file_type,sizeof(file_type),"%s","app");
@@ -2452,35 +2452,57 @@ GetAllFile(const char *path, char *name, OPTION option)
 	{
 		snprintf(file_type,sizeof(file_type),"%s","other");
 	}
+	if(0 == dir)
+	{
+		snprintf(file_type,sizeof(file_type),"%s","fold");
+	}
+
 	switch (option)
 	{
 	case add:
-		ret = sql_exec(add_db, "INSERT into Nas"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, MIME) "
+		if ( stat(path, &file) != 0 )
+		{
+			free(mime);
+			return 0;
+		}
+		nas_inotify_update_file(path , name, dir);
+		ret = sql_exec(add_db, "INSERT into Nasoption"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
-				path, name, (long long)file.st_size,file_type, file.st_ctime,nas_timestamp,m.mime);
+				" (%Q, '%q', %lld, %Q,%ld, %d );",
+				path, name, (long long)file.st_size,file_type, file.st_ctime,nas_timestamp);
 				break;
 	case rm:
-	ret = sql_exec(rm_db, "INSERT into Nas"
-			" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, MIME) "
-			"VALUES"
-			" (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
-			path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp,m.mime);
-			break;
-	case change:
-		ret = sql_exec(update_db, "INSERT into Nas"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, MIME) "
+		if ( 0 == stat(path, &file) )
+		{
+			//free(mime);
+			return 0;
+		}
+		ret = sql_exec(rm_db, "INSERT into Nasoption"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP ) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
-				path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp,m.mime);
+				" (%Q, '%q', %lld, %Q,%d, %d);",
+				path, name, 0,file_type, 0, nas_timestamp );
+		break;
+	case change:
+		if ( stat(path, &file) != 0 )
+		{
+			//free(mime);
+			return 0;
+		}
+
+
+		ret = sql_exec(update_db, "INSERT into Nasoption"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP) "
+				"VALUES"
+				" (%Q, '%q', %lld, %Q,%ld, %d);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp);
 		break;
 	default :
 		DPRINTF(E_WARN, L_GENERAL, "reset option state \n");
 		break;
 	}
 
-	;
 	if( ret != SQLITE_OK )
 	{
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);

@@ -80,8 +80,7 @@ char create_change_state_Table_sqlite[] = "CREATE TABLE Nasoption ("
 					"TYPE TEXT, "
 					"TIMESTAMP_ctime INTEGER, "
 					"TIMESTAMP INTEGER, "
-					"TITLE TEXT COLLATE NOCASE, "
-                                        "MIME TEXT);";
+					"TITLE TEXT COLLATE NOCASE);";
 #endif
 
 char create_albumArtTable_sqlite[] = "CREATE TABLE ALBUM_ART ("

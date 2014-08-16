@@ -283,7 +283,26 @@ strip_ext(char * name)
 #endif
 		*period = '\0';
 }
+#ifdef NAS
+void
+fullpathTotitle(const char * name)
+{
+	char * period;
 
+	period = strrchr(name, '/');
+	if( period )
+		 period++;
+}
+void
+strip_specia_ext(char * name)
+{
+	char * period;
+
+	period = strrchr(name, '~');
+	if( period )
+		*period = '\0';
+}
+#endif
 /* Code basically stolen from busybox */
 int
 make_dir(char * path, mode_t mode)
