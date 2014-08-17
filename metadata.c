@@ -2467,22 +2467,24 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		}
 		nas_inotify_update_file(path , name, dir);
 		ret = sql_exec(add_db, "INSERT into Nasoption"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP) "
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, OPTION) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%ld, %d );",
-				path, name, (long long)file.st_size,file_type, file.st_ctime,nas_timestamp);
+				" (%Q, '%q', %lld, %Q, %ld, %d , %d);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime,nas_timestamp,option);
 				break;
 	case rm:
+		/*
 		if ( 0 == stat(path, &file) )
 		{
 			//free(mime);
 			return 0;
 		}
-		ret = sql_exec(rm_db, "INSERT into Nasoption"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP ) "
+		*/
+		ret = sql_exec(add_db, "INSERT into Nasoption"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, OPTION ) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%d, %d);",
-				path, name, 0,file_type, 0, nas_timestamp );
+				" (%Q, '%q', %lld, %Q,%d, %d, %d);",
+				path, name, 0,file_type, 0, nas_timestamp, option );
 		break;
 	case change:
 		if ( stat(path, &file) != 0 )
@@ -2492,11 +2494,11 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		}
 
 
-		ret = sql_exec(update_db, "INSERT into Nasoption"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP) "
+		ret = sql_exec(add_db, "INSERT into Nasoption"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP,OPTION) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%ld, %d);",
-				path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp);
+				" (%Q, '%q', %lld, %Q,%ld, %d, %d);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp, option);
 		break;
 	default :
 		DPRINTF(E_WARN, L_GENERAL, "reset option state \n");

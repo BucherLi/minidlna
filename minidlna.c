@@ -1278,13 +1278,13 @@ main(int argc, char **argv)
 	if(ret !=0 ){
 		if (CreateOptionDatabase(add_db) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		scan_Dir(media_dirs->path);
+		scan_add_dir(media_dirs->path);
 	}
 	ret = open_rm_db(NULL);
 	if(ret !=0 ){
 		if (CreateOptionDatabase(rm_db) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		scan_add_dir(media_dirs->path);
+		//scan_add_dir(media_dirs->path);
 	}
 	ret = open_update_db(NULL);
 	if(ret !=0 ){

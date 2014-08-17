@@ -626,7 +626,7 @@ CreateOptionDatabase(sqlite3 *db)
 	ret = sql_exec(db, create_change_state_Table_sqlite);
 	if( ret != SQLITE_OK )
 		goto sql_failed;
-	sql_exec(db, "create INDEX IDX_Nas_option_ID ON nas(ID);");
+	sql_exec(db, "create INDEX IDX_Nas_option_ID ON nasoption(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
 		fprintf(stderr, "Error creating SQLite3 table!\n");

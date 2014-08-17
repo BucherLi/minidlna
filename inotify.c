@@ -571,33 +571,7 @@ nas_inotify_insert_directory(int fd, char *name, const char * path)
 		DPRINTF(E_INFO, L_INOTIFY, "Added watch to %s [%d]\n", path, wd);
 	}
 	scan_add_dir(path);
-	/*ds = opendir(path);
-	if( !ds )
-	{
-		DPRINTF(E_ERROR, L_INOTIFY, "opendir failed! [%s]\n", strerror(errno));
-		return -1;
-	}
-	while( (e = readdir(ds)) )
-	{
-		if( e->d_name[0] == '.' )
-			continue;
-		esc_name = escape_tag(e->d_name, 1);
-		snprintf(path_buf, sizeof(path_buf), "%s/%s", path, e->d_name);
 
-		if( type == TYPE_DIR )
-		{
-			nas_inotify_insert_directory(fd, esc_name, path_buf);
-		}
-		else if( type == TYPE_FILE )
-		{
-			if( (stat(path_buf, &st) == 0) && (st.st_blocks<<9 >= st.st_size) )
-			{
-				GetAllFile(path_buf, esc_name, 0, 1);
-			}
-		}
-		free(esc_name);
-	}
-	closedir(ds);*/
 
 	return 0;
 }
@@ -627,14 +601,14 @@ nas_inotify_update_file(const char * path , const char * name,NAS_DIR dir)
 	char *id = NULL;
 	char *title = NULL;
 	int64_t detailID = 0;
-	//GetAllFile(path, name, 1, dir);
 	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasoption", path);
 	if( !id )
 		return 1;
 	detailID = strtoll(id, NULL, 10);
 	sqlite3_free(id);
 	sqlite3_free(title);
-	GetAllFile(path, name, 2, dir);
+	GetAllFile(path, name, 1, dir);
+	nas_timestamp++;
 	sql_exec(add_db, "DELETE from Nasoption where ID = %lld", detailID);
 	return 0;
 }
@@ -910,6 +884,7 @@ start_inotify()
 							else
 							{
 								printf("[notify.c 895]name:%s\n",esc_name);
+								GetAllFile(path_buf, esc_name, 0, 1);
 							}
 #endif
 							inotify_insert_file(esc_name, path_buf);

@@ -77,12 +77,13 @@ char create_change_state_Table_sqlite[] = "CREATE TABLE Nasoption ("
 					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
 					"PATH TEXT DEFAULT NULL, "
 					"SIZE INTEGER, "
+					"OPTION INTEGER, "
 					"TYPE TEXT, "
 					"TIMESTAMP_ctime INTEGER, "
 					"TIMESTAMP INTEGER, "
 					"TITLE TEXT COLLATE NOCASE);";
 #endif
-
+//, ""OPTION INTEGER
 char create_albumArtTable_sqlite[] = "CREATE TABLE ALBUM_ART ("
 					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
 					"PATH TEXT NOT NULL"
