@@ -2462,7 +2462,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	case add:
 		if ( stat(path, &file) != 0 )
 		{
-			free(mime);
+			//free(mime);
 			return 0;
 		}
 		nas_inotify_update_file(path , name, dir);
@@ -2480,7 +2480,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 			return 0;
 		}
 		*/
-		ret = sql_exec(add_db, "INSERT into Nasoption"
+		ret = sql_exec(rm_db, "INSERT into Nasoption"
 				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, OPTION ) "
 				"VALUES"
 				" (%Q, '%q', %lld, %Q,%d, %d, %d);",
@@ -2494,7 +2494,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		}
 
 
-		ret = sql_exec(add_db, "INSERT into Nasoption"
+		ret = sql_exec(update_db, "INSERT into Nasoption"
 				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP,OPTION) "
 				"VALUES"
 				" (%Q, '%q', %lld, %Q,%ld, %d, %d);",

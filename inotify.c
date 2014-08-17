@@ -539,16 +539,7 @@ inotify_insert_directory(int fd, char *name, const char * path)
 int
 nas_inotify_insert_directory(int fd, char *name, const char * path)
 {
-	DIR * ds;
-	struct dirent * e;
-	char *id, *parent_buf, *esc_name;
-	char path_buf[PATH_MAX];
 	int wd;
-	enum file_types type = TYPE_UNKNOWN;
-	media_types dir_types = ALL_MEDIA;
-	struct media_dir_s* media_path;
-	struct stat st;
-
 	if( access(path, R_OK|X_OK) != 0 )
 	{
 		DPRINTF(E_WARN, L_INOTIFY, "Could not access %s [%s]\n", path, strerror(errno));
@@ -571,7 +562,6 @@ nas_inotify_insert_directory(int fd, char *name, const char * path)
 		DPRINTF(E_INFO, L_INOTIFY, "Added watch to %s [%d]\n", path, wd);
 	}
 	scan_add_dir(path);
-
 
 	return 0;
 }
@@ -745,6 +735,7 @@ nas_inotify_remove_directory(int fd, const char * path)
 	char **result;
 	char *fullpath = NULL;
 	char *title = NULL;
+	char *type = NULL;
 	int64_t detailID = 0;
 	int rows, i, ret = 1;
 
@@ -763,7 +754,16 @@ nas_inotify_remove_directory(int fd, const char * path)
 				detailID = strtoll(result[i], NULL, 10);
 				fullpath = sql_get_text_field(add_db, "SELECT PATH from %s where ID = %lld","nasoption", detailID);
 				title = sql_get_text_field(add_db, "SELECT TITLE from %s where ID = %lld","nasoption", detailID);
-				GetAllFile(fullpath, title, 1, 0);
+				type = sql_get_text_field(add_db, "SELECT TYPE from %s where ID = %lld","nasoption", detailID);
+				if(strcmp(type,"fold"))
+				{
+					GetAllFile(fullpath, title, 1, 1);
+				}
+				else
+				{
+					GetAllFile(fullpath, title, 1, 0);
+
+				}
 				sql_exec(add_db, "DELETE from nasoption where ID = %lld", detailID);
 			}
 			ret = 0;
