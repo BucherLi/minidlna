@@ -545,7 +545,7 @@ nas_inotify_insert_directory(int fd, char *name, const char * path)
 		DPRINTF(E_WARN, L_INOTIFY, "Could not access %s [%s]\n", path, strerror(errno));
 		return -1;
 	}
-	if( sql_get_int_field(add_db, "SELECT ID from nasoption where PATH = '%q'", path) > 0 )
+	if( sql_get_int_field(add_db, "SELECT ID from nasadd where PATH = '%q'", path) > 0 )
 	{
 		DPRINTF(E_DEBUG, L_INOTIFY, "%s already exists\n", path);
 		return 0;
@@ -573,16 +573,15 @@ nas_inotify_remove_file(const char * path , const char * name,NAS_DIR dir)
 	char *id = NULL;
 	char *title = NULL;
 	int64_t detailID = 0;
-	//title = sql_get_text_field(add_db, "SELECT TITLE from %s where PATH = '%q'","nasoption", path);
 	GetAllFile(path, name, 1, dir);
 	printf("detailID:%ld\n",detailID);
-	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasoption", path);
+	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasadd", path);
 	if( !id )
 		return 1;
 	detailID = strtoll(id, NULL, 10);
 	sqlite3_free(id);
 	sqlite3_free(title);
-	sql_exec(add_db, "DELETE from Nasoption where ID = %lld", detailID);
+	sql_exec(add_db, "DELETE from Nasadd where ID = %lld", detailID);
 	return 0;
 }
 int
@@ -591,7 +590,7 @@ nas_inotify_update_file(const char * path , const char * name,NAS_DIR dir)
 	char *id = NULL;
 	char *title = NULL;
 	int64_t detailID = 0;
-	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasoption", path);
+	id = sql_get_text_field(add_db, "SELECT ID from %s where PATH = '%q'","nasadd", path);
 	if( !id )
 		return 1;
 	detailID = strtoll(id, NULL, 10);
@@ -599,7 +598,7 @@ nas_inotify_update_file(const char * path , const char * name,NAS_DIR dir)
 	sqlite3_free(title);
 	GetAllFile(path, name, 1, dir);
 	nas_timestamp++;
-	sql_exec(add_db, "DELETE from Nasoption where ID = %lld", detailID);
+	sql_exec(add_db, "DELETE from Nasadd where ID = %lld", detailID);
 	return 0;
 }
 #endif
@@ -743,7 +742,7 @@ nas_inotify_remove_directory(int fd, const char * path)
 	/* Invalidate the scanner cache so we don't insert files into non-existent containers */
 	valid_cache = 0;
 	remove_watch(fd, path);
-	sql = sqlite3_mprintf("SELECT ID from nasoption where (PATH > '%q/' and PATH <= '%q/%c')"
+	sql = sqlite3_mprintf("SELECT ID from nasadd where (PATH > '%q/' and PATH <= '%q/%c')"
 	                      " or PATH = '%q'", path, path, 0xFF, path);
 	if( (sql_get_table(add_db, sql, &result, &rows, NULL) == SQLITE_OK) )
 	{
@@ -752,9 +751,9 @@ nas_inotify_remove_directory(int fd, const char * path)
 			for( i=1; i <= rows; i++ )
 			{
 				detailID = strtoll(result[i], NULL, 10);
-				fullpath = sql_get_text_field(add_db, "SELECT PATH from %s where ID = %lld","nasoption", detailID);
-				title = sql_get_text_field(add_db, "SELECT TITLE from %s where ID = %lld","nasoption", detailID);
-				type = sql_get_text_field(add_db, "SELECT TYPE from %s where ID = %lld","nasoption", detailID);
+				fullpath = sql_get_text_field(add_db, "SELECT PATH from %s where ID = %lld","nasadd", detailID);
+				title = sql_get_text_field(add_db, "SELECT TITLE from %s where ID = %lld","nasadd", detailID);
+				type = sql_get_text_field(add_db, "SELECT TYPE from %s where ID = %lld","nasadd", detailID);
 				if(strcmp(type,"fold"))
 				{
 					GetAllFile(fullpath, title, 1, 1);
@@ -764,7 +763,7 @@ nas_inotify_remove_directory(int fd, const char * path)
 					GetAllFile(fullpath, title, 1, 0);
 
 				}
-				sql_exec(add_db, "DELETE from nasoption where ID = %lld", detailID);
+				sql_exec(add_db, "DELETE from nasadd where ID = %lld", detailID);
 			}
 			ret = 0;
 		}

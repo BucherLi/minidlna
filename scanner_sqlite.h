@@ -73,13 +73,36 @@ char create_NasTable_sqlite[] = "CREATE TABLE Nas ("
                                         "MIME TEXT);";
 
 
-char create_change_state_Table_sqlite[] = "CREATE TABLE Nasoption ("
+char create_change_add_Table_sqlite[] = "CREATE TABLE Nasadd ("
 					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
 					"PATH TEXT DEFAULT NULL, "
 					"SIZE INTEGER, "
 					"OPTION INTEGER, "
 					"TYPE TEXT, "
 					"TIMESTAMP_ctime INTEGER, "
+					"TIMESTAMP_mtime INTEGER, "
+					"TIMESTAMP INTEGER, "
+					"TITLE TEXT COLLATE NOCASE);";
+
+char create_change_rm_Table_sqlite[] = "CREATE TABLE Nasrm ("
+					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					"PATH TEXT DEFAULT NULL, "
+					"SIZE INTEGER, "
+					"OPTION INTEGER, "
+					"TYPE TEXT, "
+					"TIMESTAMP_ctime INTEGER, "
+					"TIMESTAMP_mtime INTEGER, "
+					"TIMESTAMP INTEGER, "
+					"TITLE TEXT COLLATE NOCASE);";
+
+char create_change_update_Table_sqlite[] = "CREATE TABLE Nasupdate ("
+					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					"PATH TEXT DEFAULT NULL, "
+					"SIZE INTEGER, "
+					"OPTION INTEGER, "
+					"TYPE TEXT, "
+					"TIMESTAMP_ctime INTEGER, "
+					"TIMESTAMP_mtime INTEGER, "
 					"TIMESTAMP INTEGER, "
 					"TITLE TEXT COLLATE NOCASE);";
 #endif

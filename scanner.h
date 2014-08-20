@@ -21,6 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with MiniDLNA. If not, see <http://www.gnu.org/licenses/>.
  */
+#include "metadata.h"
 #ifndef __SCANNER_H__
 #define __SCANNER_H__
 
@@ -101,7 +102,7 @@ CreateDatabase(void);
 int
 CreateDatabase2(void);
 int
-CreateOptionDatabase(sqlite3 *db);
+CreateOptionDatabase(OPTION option);
 void
 start_scanner2();
 void

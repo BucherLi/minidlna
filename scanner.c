@@ -486,37 +486,37 @@ scan_Dir(char *path)  //main函数的argv[1] char * 作为 所需要遍历的路
 
 void
 scan_add_dir(char *path)
- {
-         DIR              *pDir ;
-         struct dirent    *ent  ;
-         int               i=0  ;
-         char              childpath[PATH_MAX];
-         char				*full_path;
-         pDir=opendir(path);
-         memset(childpath,0,sizeof(childpath));
-         full_path = malloc(PATH_MAX);
-         while((ent=readdir(pDir))!=NULL)
-         {
-               if(ent->d_type & DT_DIR)
-               {
-                         if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-                                 continue;
-                         snprintf(childpath,sizeof(childpath),"%s/%s",path,ent->d_name);
-                         printf(" dirpath:%s\n",childpath);
-                         GetAllFile(childpath, ent->d_name, 0, 0);
-                         scan_add_dir(childpath);  //递归读取下层的字目录内容， 因为是递归，所以从外往里逐次输出所有目录（路径+目录名），
-                                            //然后才在else中由内往外逐次输出所有文件名
-               }
-               else
-               {
-            	   snprintf(full_path, PATH_MAX, "%s/%s", path, ent->d_name);
-            	   GetAllFile(full_path, ent->d_name, 0, 1);
+{
+	DIR              *pDir ;
+	struct dirent    *ent  ;
+	int               i=0  ;
+	char              childpath[PATH_MAX];
+	char				*full_path;
+	pDir=opendir(path);
+	memset(childpath,0,sizeof(childpath));
+	full_path = malloc(PATH_MAX);
+	while((ent=readdir(pDir))!=NULL)
+	{
+		if(ent->d_type & DT_DIR)
+		{
+			if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+				continue;
+			snprintf(childpath,sizeof(childpath),"%s/%s",path,ent->d_name);
+			printf(" dirpath:%s\n",childpath);
+			GetAllFile(childpath, ent->d_name, 0, 0);
+			scan_add_dir(childpath);  //递归读取下层的字目录内容， 因为是递归，所以从外往里逐次输出所有目录（路径+目录名），
+			//然后才在else中由内往外逐次输出所有文件名
+		}
+		else
+		{
+			snprintf(full_path, PATH_MAX, "%s/%s", path, ent->d_name);
+			GetAllFile(full_path, ent->d_name, 0, 1);
 
-               }
-         }
+		}
+	}
 
-         free(full_path);
- }
+	free(full_path);
+}
 #endif
 
 int
@@ -620,13 +620,25 @@ sql_failed:
 }
 
 int
-CreateOptionDatabase(sqlite3 *db)
+CreateOptionDatabase(OPTION option)
 {
 	int ret;
-	ret = sql_exec(db, create_change_state_Table_sqlite);
+	switch(option)
+	{
+	case add:
+		ret = sql_exec(add_db, create_change_add_Table_sqlite);
+		break;
+	case rm:
+		ret = sql_exec(add_db, create_change_rm_Table_sqlite);
+		break;
+	case change:
+		ret = sql_exec(add_db, create_change_update_Table_sqlite);
+		break;
+	}
+
 	if( ret != SQLITE_OK )
 		goto sql_failed;
-	sql_exec(db, "create INDEX IDX_Nas_option_ID ON nasoption(ID);");
+	//sql_exec(db, "create INDEX IDX_Nas_option_ID ON nasoption(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
 		fprintf(stderr, "Error creating SQLite3 table!\n");

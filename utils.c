@@ -530,14 +530,19 @@ is_video(const char * file)
 		ends_with(file, ".vob") || ends_with(file, ".ts")    ||
 		ends_with(file, ".flv") || ends_with(file, ".xvid")  ||
 #ifdef BAIDU_DMS_OPT
-                ends_with(file, ".rm")  || ends_with(file, ".rmvb")  ||
-                ends_with(file, ".mpeg4")  || ends_with(file, ".swf")  ||
-                ends_with(file, ".wmx")  || ends_with(file, ".wm")  ||
-                ends_with(file, ".mpeg")  || ends_with(file, ".mpeg2")  ||
-                ends_with(file, ".mpga")  || ends_with(file, ".qt")  ||
-                ends_with(file, ".wmz")  || ends_with(file, ".wmd")  ||
-                ends_with(file, ".wmd")  || ends_with(file, ".f4v")  ||
-                ends_with(file, ".ts")  || ends_with(file, ".wvx")  ||
+		ends_with(file, ".rm")  || ends_with(file, ".rmvb")  ||
+		ends_with(file, ".mpeg4")  || ends_with(file, ".swf")  ||
+		ends_with(file, ".wmx")  || ends_with(file, ".wm")  ||
+		ends_with(file, ".mpeg")  || ends_with(file, ".mpeg2")  ||
+		ends_with(file, ".mpga")  || ends_with(file, ".qt")  ||
+		ends_with(file, ".wmz")  || ends_with(file, ".wmd")  ||
+		ends_with(file, ".wmd")  || ends_with(file, ".f4v")  ||
+		ends_with(file, ".ts")  || ends_with(file, ".wvx")  ||
+		ends_with(file, ".wav")  || ends_with(file, ".xv")  ||
+		ends_with(file, ".vod")  || ends_with(file, ".webm")  ||
+		ends_with(file, ".mts")  || ends_with(file, ".m2ts")  ||
+		ends_with(file, ".3gp2")  || ends_with(file, ".3gpp")  ||
+		ends_with(file, ".3g2")  || ends_with(file, ".divx")  ||
 #endif
 #ifdef TIVO_SUPPORT
 		ends_with(file, ".TiVo") ||
@@ -560,6 +565,9 @@ is_audio(const char * file)
 		ends_with(file, ".mid") || ends_with(file, ".midi") ||
 		ends_with(file, ".mp2") || ends_with(file, ".aif")  ||
 		ends_with(file, ".mpega") || ends_with(file, ".ram")||
+		ends_with(file, ".cue") || ends_with(file, ".dts")||
+		ends_with(file, ".ape") || ends_with(file, ".mp")||
+		ends_with(file, ".mka") ||
 #endif
 		ends_with(file, ".wav") || ends_with(file, ".ogg"));
 }
@@ -578,6 +586,7 @@ is_image(const char * file)
 			ends_with(file, ".qtf") || ends_with(file,".pnm")  ||
 			ends_with(file, ".bmp") || ends_with(file, ".psd") ||
 			ends_with(file, ".svg") || ends_with(file,".svgz") ||
+			ends_with(file, ".apng") || ends_with(file,".ai") ||
 			ends_with(file, ".cur") || ends_with(file,".jpe"));
 #else
 	return (ends_with(file, ".jpg") || ends_with(file, ".jpeg"));

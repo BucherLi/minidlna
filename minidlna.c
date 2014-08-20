@@ -67,6 +67,11 @@
 #include <pthread.h>
 #include <libgen.h>
 #include <pwd.h>
+#ifdef NAS
+#include <signal.h>
+#include <time.h>
+#include <sys/shm.h>
+#endif
 
 #include "config.h"
 
@@ -102,6 +107,17 @@
 # define sqlite3_threadsafe() 0
 #endif
  
+
+//#ifdef NAS
+typedef
+struct shared_use_st
+{
+	time_t flag_dlna;//作为一个标志，1表示minidlna未启动
+	time_t flag_daemon;
+	char nas_share_path[PATH_MAX];
+}SHAR_MEM;
+SHAR_MEM *share;
+//#endif
 /* OpenAndConfHTTPSocket() :
  * setup the socket used to handle incoming HTTP connections. */
 static int
@@ -305,30 +321,6 @@ open_db(sqlite3 **sq3)
 }
 #ifdef NAS
 static int
-open_db2(sqlite3 **sq3)
-{
-	char nas_path[PATH_MAX];
-	int new_db = 0;
-	snprintf(nas_path, sizeof(nas_path), "%s/nas.db", db_path);
-	if (access(nas_path, F_OK) != 0)
-	{
-		new_db = 1;
-		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
-	}
-	if (sqlite3_open(nas_path, &db2) != SQLITE_OK)
-		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open sqlite database!  Exiting...\n");
-	if (sq3)
-		*sq3 = db2;
-	sqlite3_busy_timeout(db2, 5000);
-	sql_exec(db2, "pragma page_size = 4096");
-	sql_exec(db2, "pragma journal_mode = OFF");
-	sql_exec(db2, "pragma synchronous = OFF;");
-	sql_exec(db2, "pragma default_cache_size = 8192;");
-
-	return new_db;
-}
-
-static int
 open_add_db(sqlite3 **sq3)
 {
 	char add_db_path[PATH_MAX];
@@ -352,53 +344,6 @@ open_add_db(sqlite3 **sq3)
 	return new_db;
 }
 
-static int
-open_rm_db(sqlite3 **sq3)
-{
-	char rm_db_path[PATH_MAX];
-	int new_db = 0;
-	snprintf(rm_db_path, sizeof(rm_db_path), "%s/rm.db", db_path);
-	if (access(rm_db_path, F_OK) != 0)
-	{
-		new_db = 1;
-		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
-	}
-	if (sqlite3_open(rm_db_path, &rm_db) != SQLITE_OK)
-		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open rm_sqlite_database!  Exiting...\n");
-	if (sq3)
-		*sq3 = rm_db;
-	sqlite3_busy_timeout(db2, 5000);
-	sql_exec(rm_db, "pragma page_size = 4096");
-	sql_exec(rm_db, "pragma journal_mode = OFF");
-	sql_exec(rm_db, "pragma synchronous = OFF;");
-	sql_exec(rm_db, "pragma default_cache_size = 8192;");
-
-	return new_db;
-}
-
-static int
-open_update_db(sqlite3 **sq3)
-{
-	char update_db_path[PATH_MAX];
-	int new_db = 0;
-	snprintf(update_db_path, sizeof(update_db_path), "%s/update.db", db_path);
-	if (access(update_db_path, F_OK) != 0)
-	{
-		new_db = 1;
-		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
-	}
-	if (sqlite3_open(update_db_path, &update_db) != SQLITE_OK)
-		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open update_sqlite_database!  Exiting...\n");
-	if (sq3)
-		*sq3 = update_db;
-	sqlite3_busy_timeout(update_db, 5000);
-	sql_exec(update_db, "pragma page_size = 4096");
-	sql_exec(update_db, "pragma journal_mode = OFF");
-	sql_exec(update_db, "pragma synchronous = OFF;");
-	sql_exec(update_db, "pragma default_cache_size = 8192;");
-
-	return new_db;
-}
 #endif
 static void
 check_db(sqlite3 *db, int new_db, pid_t *scanner_pid)
@@ -487,76 +432,8 @@ rescan:
 #endif
 	}
 }
-#ifdef NAS
-static void
-check_db2(sqlite3 *db, int new_db, pid_t *scanner_pid)
-{
-	struct media_dir_s *media_path = NULL;
-	char cmd[PATH_MAX*2];
-	char **result;
-	int i, rows = 0;
-	int ret;
 
-	if (!new_db)
-	{
-		/* Check if any new media dirs appeared */
-		media_path = media_dirs;
-		while (media_path)
-		{
-			ret = sql_get_int_field(db, "SELECT TIMESTAMP from nas where PATH = %Q", media_path->path);
-			if (ret != media_path->types)
-			{
-				ret = 1;
-				goto rescan;
-			}
-			media_path = media_path->next;
-		}
-		/* Check if any media dirs disappeared */
-		sql_get_table(db, "SELECT VALUE from SETTINGS where KEY = 'media_dir'", &result, &rows, NULL);
-		for (i=1; i <= rows; i++)
-		{
-			media_path = media_dirs;
-			while (media_path)
-			{
-				if (strcmp(result[i], media_path->path) == 0)
-					break;
-				media_path = media_path->next;
-			}
-			if (!media_path)
-			{
-				ret = 2;
-				sqlite3_free_table(result);
-				goto rescan;
-			}
-		}
-		sqlite3_free_table(result);
-	}
-
-	ret = db_upgrade(db);
-	if (ret != 0)
-	{
-rescan:
-		if (ret < 0)
-			DPRINTF(E_WARN, L_GENERAL, "Creating new database at %s/nas.db\n", db_path);
-		else if (ret == 1)
-			DPRINTF(E_WARN, L_GENERAL, "New media_dir detected; rescanning...\n");
-		else if (ret == 2)
-			DPRINTF(E_WARN, L_GENERAL, "Removed media_dir detected; rescanning...\n");
-		else
-			DPRINTF(E_WARN, L_GENERAL, "Database version mismatch; need to recreate...\n");
-		sqlite3_close(db);
-
-		snprintf(cmd, sizeof(cmd), "rm -rf %s/nas.db %s/art_cache", db_path, db_path);
-		if (system(cmd) != 0)
-			DPRINTF(E_FATAL, L_GENERAL, "Failed to clean old file cache!  Exiting...\n");
-		open_db2(&db);
-		if (CreateDatabase2() != 0)
-			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-
-	}
-	scan_Dir(media_dirs->path);
-}
-
+#ifdef noNAS
 static void
 check_option_db(sqlite3 *db, int new_db)
 {
@@ -618,7 +495,7 @@ rescan:
 		snprintf(cmd, sizeof(cmd), "rm -rf %s/nas.db %s/art_cache", db_path, db_path);
 		if (system(cmd) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "Failed to clean old file cache!  Exiting...\n");
-		open_db2(&db);
+		//open_db2(&db);
 		if (CreateDatabase2() != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 
@@ -1219,12 +1096,50 @@ init(int argc, char **argv)
 
 	return 0;
 }
+//#ifdef NAS
+	void minidlna_handler()
+	{
+		share->flag_dlna = time(NULL);
+		printf("minidlna flag_dlna:%ld\n", share->flag_dlna);
+		printf("minidlna flag_daemon:%ld\n", share->flag_daemon);
+		printf("nas_path:%s\n", share->nas_share_path);
+		alarm(10);
+	}
 
+	void nas_shm_init()
+	{
+		void *shm = NULL;
+		int shmid;
+		//创建共享内存,如果存在则返回shmid
+		shmid = shmget((key_t)1234, sizeof(struct shared_use_st), 0666|IPC_CREAT);
+		printf ( "successfully created segment : %d \n", shmid ) ;
+		if(shmid == -1)
+		{
+			fprintf(stderr, "shmget failed\n");
+			//exit(EXIT_FAILURE);
+		}
+		//将共享内存连接到当前进程的地址空间
+		shm = shmat(shmid, (void*)0, 0);
+		if(shm == (void*)-1)
+		{
+			fprintf(stderr, "shmat failed\n");
+			exit(EXIT_FAILURE);
+		}
+		//memset(shm, 0, sizeof(struct shared_use_st));
+		printf("Memory attached at %X\n", (int)shm);
+		//设置共享内存
+		share = (struct shared_use_st*)shm;
+		//每10秒向共享内存中写flag
+		signal(SIGALRM, minidlna_handler);
+		alarm(1);
+	}
+//#endif
 /* === main === */
 /* process HTTP or SSDP requests */
 int
 main(int argc, char **argv)
 {
+	int nas_li;
 	int ret, i;
 	int shttpl = -1;
 	int smonitor = -1;
@@ -1237,6 +1152,10 @@ main(int argc, char **argv)
 	time_t lastupdatetime = 0;
 	int max_fd = -1;
 	int last_changecnt = 0;
+//#ifdef NAS
+	char scan_path[PATH_MAX];
+	struct stat file;
+//#endif
 	pid_t scanner_pid = 0;
 	pthread_t inotify_thread = 0;
 #ifdef TIVO_SUPPORT
@@ -1265,49 +1184,38 @@ main(int argc, char **argv)
 	{
 		DPRINTF(E_WARN, L_GENERAL, "SQLite library is old.  Please use version 3.5.1 or newer.\n");
 	}
-
 	LIST_INIT(&upnphttphead);
-#ifdef NAS
-	ret = open_db2(NULL);
-	if(ret !=0 ){
-		if (CreateDatabase2() != 0)
-			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		//scan_Dir(media_dirs->path);
+//#ifdef NAS
+
+	nas_shm_init();
+	sleep(2);
+// (stat(share->nas_share_path,&file) == 0)
+	printf("0share nas :%d\n",share->flag_daemon);
+	nas_li = time(NULL)-share->flag_daemon;
+	printf("nas_li:%d\n",nas_li);
+	if((time(NULL) - share->flag_daemon) > 15)
+	{
+		snprintf(scan_path , PATH_MAX, "%s",media_dirs->path);
+		printf("scan_path0:%s\n",scan_path);
 	}
+	else
+	{
+		snprintf(scan_path , PATH_MAX, "%s", share->nas_share_path);
+		printf("scan_path1:%s\n",scan_path);
+		printf("nas_share_path1:%s\n",share->nas_share_path);
+	}
+	printf("scan_path2:%s\n",scan_path);
 	ret = open_add_db(NULL);
 	if(ret !=0 ){
-		if (CreateOptionDatabase(add_db) != 0)
+		if (CreateOptionDatabase(0) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		scan_add_dir(media_dirs->path);
-	}
-	ret = open_rm_db(NULL);
-	if(ret !=0 ){
-		if (CreateOptionDatabase(rm_db) != 0)
+		if (CreateOptionDatabase(1) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		//scan_add_dir(media_dirs->path);
-	}
-	ret = open_update_db(NULL);
-	if(ret !=0 ){
-		if (CreateOptionDatabase(update_db) != 0)
+		if (CreateOptionDatabase(2) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+		scan_add_dir(scan_path);
 	}
-
-
-	/*
-	if (ret == 0)
-	{
-		updateID = sql_get_int_field(db2, "SELECT VALUE from SETTINGS where KEY = 'UPDATE_ID'");
-		if (updateID == -1)
-			ret = -1;
-	}
-	*/
-	/*
-	check_db2(db2, ret, &scanner_pid);
-	check_db3(add_db, ret, &scanner_pid);
-	check_db3(rm_db, ret, &scanner_pid);
-	check_db3(update_db, ret, &scanner_pid);
-	*/
-#endif
+//#endif
 	ret = open_db(NULL);
 	if (ret == 0)
 	{

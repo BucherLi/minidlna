@@ -2412,8 +2412,11 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	char file_type[16];
 	char full_dir[64];
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	nas_timestamp++;
 	printf("full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
+	if(strrchr(name, '~'))
+	{
+		return 0;
+	}
 	while(full_dir[num] != '\0')
 	{
 		if(dir_count > 11){
@@ -2426,7 +2429,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		}
 		num++;
 	}
-
+	nas_timestamp++;
 	//mime = getmime(name);
 	if(is_video(name))
 	{
@@ -2466,11 +2469,11 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 			return 0;
 		}
 		nas_inotify_update_file(path , name, dir);
-		ret = sql_exec(add_db, "INSERT into Nasoption"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, OPTION) "
+		ret = sql_exec(add_db, "INSERT into Nasadd"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime, TIMESTAMP_mtime,TIMESTAMP, OPTION) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q, %ld, %d , %d);",
-				path, name, (long long)file.st_size,file_type, file.st_ctime,nas_timestamp,option);
+				" (%Q, '%q', %lld, %Q, %ld, %ld, %d , %d);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime, file.st_mtime,nas_timestamp,option);
 				break;
 	case rm:
 		/*
@@ -2480,25 +2483,25 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 			return 0;
 		}
 		*/
-		ret = sql_exec(rm_db, "INSERT into Nasoption"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP, OPTION ) "
+		ret = sql_exec(add_db, "INSERT into Nasrm"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime, TIMESTAMP_mtime, TIMESTAMP, OPTION ) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%d, %d, %d);",
-				path, name, 0,file_type, 0, nas_timestamp, option );
+				" (%Q, '%q', %lld, %Q, %d, %d, %d, %d);",
+				path, name, 0, file_type, 0, 0, nas_timestamp, option );
 		break;
 	case change:
 		if ( stat(path, &file) != 0 )
 		{
-			//free(mime);
+
 			return 0;
 		}
 
 
-		ret = sql_exec(update_db, "INSERT into Nasoption"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime,TIMESTAMP,OPTION) "
+		ret = sql_exec(add_db, "INSERT into Nasupdate"
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime, TIMESTAMP_mtime,TIMESTAMP,OPTION) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q,%ld, %d, %d);",
-				path, name, (long long)file.st_size,file_type, file.st_ctime, nas_timestamp, option);
+				" (%Q, '%q', %lld, %Q,%ld, %ld,%d, %d);",
+				path, name, (long long)file.st_size,file_type, file.st_ctime, file.st_mtime, nas_timestamp, option);
 		break;
 	default :
 		DPRINTF(E_WARN, L_GENERAL, "reset option state \n");
@@ -2510,11 +2513,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		fprintf(stderr, "Error inserting details for '%s'!\n", path);
 		ret = 0;
 	}
-	else
-	{
-		ret = sqlite3_last_insert_rowid(db2);
-	}
-	free(mime);
+
 	return ret;
 }
 #endif
