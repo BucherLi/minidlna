@@ -865,7 +865,11 @@ start_inotify()
 						}
 
 					}
+#ifdef NAS
+					else if( event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO))
+#else
 					else if( event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO) && st.st_size > 0 )
+#endif
 					{
 						if( (event->mask & IN_MOVED_TO) ||
 						    (sql_get_int_field(db, "SELECT TIMESTAMP from DETAILS where PATH = '%q'", path_buf) != st.st_mtime)

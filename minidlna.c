@@ -74,7 +74,6 @@
 #endif
 
 #include "config.h"
-
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>
@@ -109,14 +108,8 @@
  
 
 //#ifdef NAS
-typedef
-struct shared_use_st
-{
-	time_t flag_dlna;//作为一个标志，1表示minidlna未启动
-	time_t flag_daemon;
-	char nas_share_path[PATH_MAX];
-}SHAR_MEM;
-SHAR_MEM *share;
+
+
 //#endif
 /* OpenAndConfHTTPSocket() :
  * setup the socket used to handle incoming HTTP connections. */
@@ -1096,7 +1089,7 @@ init(int argc, char **argv)
 
 	return 0;
 }
-//#ifdef NAS
+#ifdef NAS
 	void minidlna_handler()
 	{
 		share->flag_dlna = time(NULL);
@@ -1133,7 +1126,7 @@ init(int argc, char **argv)
 		signal(SIGALRM, minidlna_handler);
 		alarm(1);
 	}
-//#endif
+#endif
 /* === main === */
 /* process HTTP or SSDP requests */
 int
@@ -1185,10 +1178,9 @@ main(int argc, char **argv)
 		DPRINTF(E_WARN, L_GENERAL, "SQLite library is old.  Please use version 3.5.1 or newer.\n");
 	}
 	LIST_INIT(&upnphttphead);
-//#ifdef NAS
+#ifdef NAS
 
 	nas_shm_init();
-	sleep(2);
 // (stat(share->nas_share_path,&file) == 0)
 	printf("0share nas :%d\n",share->flag_daemon);
 	nas_li = time(NULL)-share->flag_daemon;
@@ -1215,7 +1207,7 @@ main(int argc, char **argv)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 		scan_add_dir(scan_path);
 	}
-//#endif
+#endif
 	ret = open_db(NULL);
 	if (ret == 0)
 	{

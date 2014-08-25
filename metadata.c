@@ -2413,6 +2413,11 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	char full_dir[64];
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
 	printf("full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
+	if((time(NULL) - share->flag_daemon) < 15){
+		if(NULL == strstr(path, share->nas_share_path)){
+			return 0;
+		}
+	}
 	if(strrchr(name, '~'))
 	{
 		return 0;
@@ -2484,9 +2489,9 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		}
 		*/
 		ret = sql_exec(add_db, "INSERT into Nasrm"
-				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime, TIMESTAMP_mtime, TIMESTAMP, OPTION ) "
+				" (PATH, TITLE, SIZE,TYPE, TIMESTAMP_ctime, TIMESTAMP_mtime, TIMESTAMP, OPTION) "
 				"VALUES"
-				" (%Q, '%q', %lld, %Q, %d, %d, %d, %d);",
+				" (%Q, '%q', %d, %Q, %d, %d, %d, %d);",
 				path, name, 0, file_type, 0, 0, nas_timestamp, option );
 		break;
 	case change:

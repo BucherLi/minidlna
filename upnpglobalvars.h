@@ -186,6 +186,16 @@ extern time_t startup_time;
 
 #ifdef NAS
 extern int nas_timestamp;
+
+typedef
+struct shared_use_st
+{
+	time_t flag_dlna;//作为一个标志，1表示minidlna未启动
+	time_t flag_daemon;
+	char nas_share_path[4096];
+}SHAR_MEM;
+
+extern SHAR_MEM *share;
 #endif
 
 extern struct runtime_vars_s runtime_vars;
