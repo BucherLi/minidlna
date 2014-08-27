@@ -302,6 +302,31 @@ strip_specia_ext(char * name)
 	if( period )
 		*period = '\0';
 }
+int64_t
+CheckDiskInfo(char *path)
+{
+	struct stat file;
+	char *OldDirMtime = NULL;
+	int64_t	  ret;
+	if ( stat(path, &file) != 0 )
+		return 0;
+	OldDirMtime = sql_get_text_field(add_db,
+			"SELECT NASdir_mtime from nasdiskinfo where ID = (select max(ID) from nasdiskinfo)", path);
+	if(atoi(OldDirMtime) == file.st_mtime)
+	{
+		ret = 0;
+	}
+	else
+	{
+		sql_exec(add_db, "INSERT into Nasdiskinfo"
+				" (PATH, SIZE, NASdir_mtime, NASdir_ctime) "
+				"VALUES"
+				" (%Q, %d, %ld, %ld );",
+				path, 0, file.st_mtime,time(NULL));
+		ret =1;
+	}
+	return ret;
+}
 #endif
 /* Code basically stolen from busybox */
 int

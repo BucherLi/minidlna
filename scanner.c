@@ -604,15 +604,17 @@ insert_file(char *name, const char *path, const char *parentID, int object)
 	insert_containers(name, path, objectID, class, detailID);
 	return 0;
 }
+
+
+
 #ifdef NAS
 int
-CreateDatabase2(void)
+CreateDiskDb(void)
 {
 	int ret;
-	ret = sql_exec(db2, create_NasTable_sqlite);
+	ret = sql_exec(add_db, create_diskinfo_sqlite);
 	if( ret != SQLITE_OK )
 		goto sql_failed;
-	sql_exec(db2, "create INDEX IDX_Nas_ID ON nas(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
 		fprintf(stderr, "Error creating SQLite3 table!\n");

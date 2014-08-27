@@ -106,11 +106,6 @@
 # define sqlite3_threadsafe() 0
 #endif
  
-
-//#ifdef NAS
-
-
-//#endif
 /* OpenAndConfHTTPSocket() :
  * setup the socket used to handle incoming HTTP connections. */
 static int
@@ -318,11 +313,21 @@ open_add_db(sqlite3 **sq3)
 {
 	char add_db_path[PATH_MAX];
 	int new_db = 0;
+	int ret;
 	snprintf(add_db_path, sizeof(add_db_path), "%s/add.db", db_path);
-	if (access(add_db_path, F_OK) != 0)
+	if (access(add_db_path, F_OK) == 0)
+	{
+		ret = CheckDiskInfo(share->nas_share_path);
+		if(ret != 0)
+			share->DiskChangeFlag = 1;
+		else
+			share->DiskChangeFlag = 0;
+	}
+	else
 	{
 		new_db = 1;
 		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
+		share->DiskChangeFlag = 1;
 	}
 	if (sqlite3_open(add_db_path, &add_db) != SQLITE_OK)
 		DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open add_sqlite_database!  Exiting...\n");
@@ -1093,6 +1098,7 @@ init(int argc, char **argv)
 	void minidlna_handler()
 	{
 		share->flag_dlna = time(NULL);
+		printf("minidlna flag_disk_change:%ld\n", share->DiskChangeFlag);
 		printf("minidlna flag_dlna:%ld\n", share->flag_dlna);
 		printf("minidlna flag_daemon:%ld\n", share->flag_daemon);
 		printf("nas_path:%s\n", share->nas_share_path);
@@ -1145,10 +1151,10 @@ main(int argc, char **argv)
 	time_t lastupdatetime = 0;
 	int max_fd = -1;
 	int last_changecnt = 0;
-//#ifdef NAS
+#ifdef NAS
 	char scan_path[PATH_MAX];
 	struct stat file;
-//#endif
+#endif
 	pid_t scanner_pid = 0;
 	pthread_t inotify_thread = 0;
 #ifdef TIVO_SUPPORT
@@ -1182,7 +1188,7 @@ main(int argc, char **argv)
 
 	nas_shm_init();
 // (stat(share->nas_share_path,&file) == 0)
-	printf("0share nas :%d\n",share->flag_daemon);
+	printf("0share nas :%ld\n",share->flag_daemon);
 	nas_li = time(NULL)-share->flag_daemon;
 	printf("nas_li:%d\n",nas_li);
 	if((time(NULL) - share->flag_daemon) > 15)
@@ -1197,8 +1203,13 @@ main(int argc, char **argv)
 		printf("nas_share_path1:%s\n",share->nas_share_path);
 	}
 	printf("scan_path2:%s\n",scan_path);
+	//xcloud目录mtime入库
+	//检查xcloud目录mtime
 	ret = open_add_db(NULL);
 	if(ret !=0 ){
+		if (CreateDiskDb() != 0)
+			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
+		CheckDiskInfo(scan_path);
 		if (CreateOptionDatabase(0) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 		if (CreateOptionDatabase(1) != 0)

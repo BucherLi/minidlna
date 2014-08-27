@@ -105,6 +105,13 @@ char create_change_update_Table_sqlite[] = "CREATE TABLE Nasupdate ("
 					"TIMESTAMP_mtime INTEGER, "
 					"TIMESTAMP INTEGER, "
 					"TITLE TEXT COLLATE NOCASE);";
+
+char create_diskinfo_sqlite[] = "CREATE TABLE Nasdiskinfo ("
+					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					"PATH TEXT DEFAULT NULL, "
+					"SIZE INTEGER, "
+					"NASdir_mtime INTEGER, "
+					"NASdir_ctime INTEGER);";
 #endif
 //, ""OPTION INTEGER
 char create_albumArtTable_sqlite[] = "CREATE TABLE ALBUM_ART ("

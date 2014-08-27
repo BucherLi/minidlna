@@ -192,6 +192,7 @@ struct shared_use_st
 {
 	time_t flag_dlna;//作为一个标志，1表示minidlna未启动
 	time_t flag_daemon;
+	int DiskChangeFlag;
 	char nas_share_path[4096];
 }SHAR_MEM;
 

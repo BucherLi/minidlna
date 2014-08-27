@@ -52,7 +52,8 @@ int is_image(const char * file);
 #ifdef NAS
 int is_text(const char * file);
 int is_application(const char * file);
-strip_specia_ext(char * name);
+void strip_specia_ext(char * name);
+int64_t CheckDiskInfo(char *path);
 #endif
 int is_playlist(const char * file);
 int is_album_art(const char * name);

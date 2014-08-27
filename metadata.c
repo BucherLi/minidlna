@@ -2521,4 +2521,5 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 
 	return ret;
 }
+
 #endif
