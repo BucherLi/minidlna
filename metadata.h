@@ -115,6 +115,8 @@ int64_t
 GetAppMetadata(const char *path, char *name);
 int64_t
 GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir);
+void
+GetDiskInfo(char *path);
 int
 nas_inotify_update_file(const char * path , const char * name,NAS_DIR dir);
 #endif

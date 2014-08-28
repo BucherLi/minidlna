@@ -2407,7 +2407,6 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 {
 	struct stat file;
 	int64_t	  ret;
-	char *mime = NULL;
 	int dir_count=0,num=0;
 	char file_type[16];
 	char full_dir[64];
@@ -2464,7 +2463,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	{
 		snprintf(file_type,sizeof(file_type),"%s","fold");
 	}
-
+	GetDiskInfo(share->nas_share_path);
 	switch (option)
 	{
 	case add:
@@ -2521,5 +2520,18 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 
 	return ret;
 }
+void
+GetDiskInfo(char *path)
+{
+	struct stat file;
+	if ( stat(path, &file) != 0 )
+		return;
+		sql_exec(add_db, "INSERT into Nasdiskinfo"
+				" (PATH, SIZE, NASdir_mtime, NASdir_ctime) "
+				"VALUES"
+				" (%Q, %d, %ld, %ld );",
+				path, 0, file.st_mtime, nas_timestamp);
 
+	return;
+}
 #endif

@@ -33,6 +33,7 @@
 #include "log.h"
 
 #ifdef NAS
+#include"sql.h"
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
@@ -307,14 +308,19 @@ CheckDiskInfo(char *path)
 {
 	struct stat file;
 	char *OldDirMtime = NULL;
+	char *timestamp = NULL;
 	int64_t	  ret;
 	if ( stat(path, &file) != 0 )
 		return 0;
 	OldDirMtime = sql_get_text_field(add_db,
-			"SELECT NASdir_mtime from nasdiskinfo where ID = (select max(ID) from nasdiskinfo)", path);
-	if(atoi(OldDirMtime) == file.st_mtime)
+			"SELECT NASdir_mtime from nasdiskinfo where ID = (select max(ID) from nasdiskinfo)");
+	if((OldDirMtime != NULL) && (strtoll(OldDirMtime,NULL,10) == file.st_mtime))
 	{
 		ret = 0;
+		timestamp = sql_get_text_field(add_db,
+				"SELECT NASdir_ctime from nasdiskinfo where ID = (select max(ID) from nasdiskinfo)");
+		nas_timestamp = atoi(timestamp);
+		printf("nas_timestamp:%d\n", nas_timestamp);
 	}
 	else
 	{
@@ -322,7 +328,7 @@ CheckDiskInfo(char *path)
 				" (PATH, SIZE, NASdir_mtime, NASdir_ctime) "
 				"VALUES"
 				" (%Q, %d, %ld, %ld );",
-				path, 0, file.st_mtime,time(NULL));
+				path, 0, file.st_mtime, nas_timestamp);
 		ret =1;
 	}
 	return ret;

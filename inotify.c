@@ -293,16 +293,6 @@ inotify_insert_file(char * name, const char * path)
 	media_types types = ALL_MEDIA;
 	struct media_dir_s * media_path = media_dirs;
 	struct stat st;
-#ifdef NAS_no
-	 if(is_text(path))
-	 {
-	   GetTextMetadata(path,name);
-	 }
-	 else if(is_application(path))
-	 {
-	   GetAppMetadata(path, name);
-	 }
-#endif
 	/* Is it cover art for another file? */
 	if( is_image(path) )
 		update_if_album_art(path);
@@ -571,7 +561,6 @@ int
 nas_inotify_remove_file(const char * path , const char * name,NAS_DIR dir)
 {
 	char *id = NULL;
-	char *title = NULL;
 	int64_t detailID = 0;
 	GetAllFile(path, name, 1, dir);
 	printf("detailID:%ld\n",detailID);
@@ -580,7 +569,6 @@ nas_inotify_remove_file(const char * path , const char * name,NAS_DIR dir)
 		return 1;
 	detailID = strtoll(id, NULL, 10);
 	sqlite3_free(id);
-	sqlite3_free(title);
 	sql_exec(add_db, "DELETE from Nasadd where ID = %lld", detailID);
 	return 0;
 }
@@ -613,19 +601,6 @@ inotify_remove_file(const char * path)
 	char **result;
 	int64_t detailID = 0;
 	int rows, playlist;
-#ifdef NAS_no
-   if(is_text(path)||is_application(path))
- {
-	   printf("2:%ld\n",detailID);
-	   id = sql_get_text_field(db2, "SELECT ID from %s where PATH = '%q'","nas", path);
-	   printf("3:%s\n",id);
-	   if( !id )
-	   		return 1;
-	   	detailID = strtoll(id, NULL, 10);
-	   	sqlite3_free(id);
-	   	sql_exec(db2, "DELETE from Nas where ID = %lld", detailID);
- }
-#endif
 	if( ends_with(path, ".srt") )
 	{
 		return sql_exec(db, "DELETE from CAPTIONS where PATH = '%q'", path);

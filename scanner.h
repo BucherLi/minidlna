@@ -100,7 +100,7 @@ int
 CreateDatabase(void);
 #ifdef NAS
 int
-CreateDatabase2(void);
+CreateDiskDb(void);
 int
 CreateOptionDatabase(OPTION option);
 void

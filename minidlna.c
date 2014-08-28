@@ -68,6 +68,7 @@
 #include <libgen.h>
 #include <pwd.h>
 #ifdef NAS
+#include <unistd.h>
 #include <signal.h>
 #include <time.h>
 #include <sys/shm.h>
@@ -315,15 +316,25 @@ open_add_db(sqlite3 **sq3)
 	int new_db = 0;
 	int ret;
 	snprintf(add_db_path, sizeof(add_db_path), "%s/add.db", db_path);
+
 	if (access(add_db_path, F_OK) == 0)
 	{
+		if (sqlite3_open(add_db_path, &add_db) != SQLITE_OK)
+				DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to open add_sqlite_database!  Exiting...\n");
 		ret = CheckDiskInfo(share->nas_share_path);
+		sqlite3_close(add_db);
 		if(ret != 0)
+		{
 			share->DiskChangeFlag = 1;
+			remove("./cache/minidlna/add.db");
+		}
 		else
+		{
 			share->DiskChangeFlag = 0;
+		}
 	}
-	else
+
+	if (access(add_db_path, F_OK) != 0)
 	{
 		new_db = 1;
 		make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
@@ -338,7 +349,6 @@ open_add_db(sqlite3 **sq3)
 	sql_exec(add_db, "pragma journal_mode = OFF");
 	sql_exec(add_db, "pragma synchronous = OFF;");
 	sql_exec(add_db, "pragma default_cache_size = 8192;");
-
 	return new_db;
 }
 
@@ -1097,8 +1107,9 @@ init(int argc, char **argv)
 #ifdef NAS
 	void minidlna_handler()
 	{
+		printf("1:hello word\n");
 		share->flag_dlna = time(NULL);
-		printf("minidlna flag_disk_change:%ld\n", share->DiskChangeFlag);
+		printf("minidlna flag_disk_change:%d\n", share->DiskChangeFlag);
 		printf("minidlna flag_dlna:%ld\n", share->flag_dlna);
 		printf("minidlna flag_daemon:%ld\n", share->flag_daemon);
 		printf("nas_path:%s\n", share->nas_share_path);
@@ -1129,6 +1140,7 @@ init(int argc, char **argv)
 		//设置共享内存
 		share = (struct shared_use_st*)shm;
 		//每10秒向共享内存中写flag
+		printf("[nas_shm_init]:hello word\n");
 		signal(SIGALRM, minidlna_handler);
 		alarm(1);
 	}
@@ -1137,7 +1149,7 @@ init(int argc, char **argv)
 /* process HTTP or SSDP requests */
 int
 main(int argc, char **argv)
-{
+ {
 	int nas_li;
 	int ret, i;
 	int shttpl = -1;
@@ -1153,7 +1165,6 @@ main(int argc, char **argv)
 	int last_changecnt = 0;
 #ifdef NAS
 	char scan_path[PATH_MAX];
-	struct stat file;
 #endif
 	pid_t scanner_pid = 0;
 	pthread_t inotify_thread = 0;
@@ -1178,35 +1189,28 @@ main(int argc, char **argv)
 		return 1;
 
 	DPRINTF(E_WARN, L_GENERAL, "Starting " SERVER_NAME " version " MINIDLNA_VERSION ".\n");
+#ifdef NAS
 	DPRINTF(E_WARN, L_GENERAL, "Starting XDU_NAS " MINIDLNA_BAIDU ".\n");
+#endif
 	if (sqlite3_libversion_number() < 3005001)
 	{
 		DPRINTF(E_WARN, L_GENERAL, "SQLite library is old.  Please use version 3.5.1 or newer.\n");
 	}
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
-
 	nas_shm_init();
-// (stat(share->nas_share_path,&file) == 0)
-	printf("0share nas :%ld\n",share->flag_daemon);
 	nas_li = time(NULL)-share->flag_daemon;
-	printf("nas_li:%d\n",nas_li);
 	if((time(NULL) - share->flag_daemon) > 15)
 	{
 		snprintf(scan_path , PATH_MAX, "%s",media_dirs->path);
-		printf("scan_path0:%s\n",scan_path);
 	}
 	else
 	{
 		snprintf(scan_path , PATH_MAX, "%s", share->nas_share_path);
-		printf("scan_path1:%s\n",scan_path);
-		printf("nas_share_path1:%s\n",share->nas_share_path);
 	}
-	printf("scan_path2:%s\n",scan_path);
-	//xcloud目录mtime入库
-	//检查xcloud目录mtime
 	ret = open_add_db(NULL);
-	if(ret !=0 ){
+	if(ret !=0 )
+	{
 		if (CreateDiskDb() != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 		CheckDiskInfo(scan_path);
