@@ -316,7 +316,8 @@ open_add_db(sqlite3 **sq3)
 	int new_db = 0;
 	int ret;
 	snprintf(add_db_path, sizeof(add_db_path), "%s/add.db", db_path);
-
+	//if(strcmp(share->dlna_db_path,add_db_path) != 0)
+		//snprintf(share->dlna_db_path, sizeof(share->dlna_db_path), "%s", add_db_path);
 	if (access(add_db_path, F_OK) == 0)
 	{
 		if (sqlite3_open(add_db_path, &add_db) != SQLITE_OK)
@@ -1107,8 +1108,9 @@ init(int argc, char **argv)
 #ifdef NAS
 	void minidlna_handler()
 	{
-		printf("1:hello word\n");
+		snprintf(share->dlna_db_path, sizeof(share->dlna_db_path), "%s/%s", db_path, "add.db");
 		share->flag_dlna = time(NULL);
+		printf("[minidlna_handler]db_path:%s\n", share->dlna_db_path);
 		printf("minidlna flag_disk_change:%d\n", share->DiskChangeFlag);
 		printf("minidlna flag_dlna:%ld\n", share->flag_dlna);
 		printf("minidlna flag_daemon:%ld\n", share->flag_daemon);
@@ -1121,7 +1123,7 @@ init(int argc, char **argv)
 		void *shm = NULL;
 		int shmid;
 		//创建共享内存,如果存在则返回shmid
-		shmid = shmget((key_t)1234, sizeof(struct shared_use_st), 0666|IPC_CREAT);
+		shmid = shmget((key_t)1234, 2*sizeof(struct shared_use_st), 0666|IPC_CREAT);
 		printf ( "successfully created segment : %d \n", shmid ) ;
 		if(shmid == -1)
 		{
