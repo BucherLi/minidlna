@@ -1199,6 +1199,8 @@ main(int argc, char **argv)
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
 	nas_shm_init();
+	//get_nas_scan_path(scan_path);
+
 	nas_li = time(NULL)-share->flag_daemon;
 	if((time(NULL) - share->flag_daemon) > 15)
 	{
@@ -1220,7 +1222,6 @@ main(int argc, char **argv)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 		if (CreateOptionDatabase(2) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		scan_add_dir(scan_path);
 	}
 #endif
 	ret = open_db(NULL);
@@ -1241,6 +1242,9 @@ main(int argc, char **argv)
 		else if (pthread_create(&inotify_thread, NULL, start_inotify, NULL) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: pthread_create() failed for start_inotify. EXITING\n");
 	}
+#endif
+#ifdef NAS
+	scan_add_dir(scan_path);
 #endif
 	smonitor = OpenAndConfMonitorSocket();
 
