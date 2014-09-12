@@ -407,6 +407,26 @@ title_to_ext(const char * title)
 		period++;
 	return period;
 }
+int
+dir_depth(const char *path)
+{
+
+	char depthchar='/';
+	int i,Count=0;
+	for( i = 0 ; i < strlen(path) ; i ++ )
+	{
+		if(path[i] == depthchar)
+			Count++;
+	}
+	return Count;
+}
+void
+get_nas_scan_path(char *newifi_path)
+{
+	char path[PATH_MAX];
+	snprintf(path, 10, "%s", db_path);
+	snprintf(newifi_path, PATH_MAX, "%s/%s", path, "newifi");
+}
 #endif
 const char *
 mime_to_ext(const char * mime)
