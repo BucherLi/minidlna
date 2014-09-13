@@ -324,46 +324,10 @@ GetFolderMetadata(const char *name, const char *path, const char *artist, const 
 
 	return ret;
 }
-#ifdef NAS
-int64_t
-GetFolderMetadata2(const char *name, const char *path, const char *artist, const char *genre, int64_t album_art)
-{
-	int ret;
 
-	ret = sql_exec(db2, "INSERT into DETAILS"
-	                   " (TITLE, PATH, CREATOR, ARTIST, GENRE, ALBUM_ART) "
-	                   "VALUES"
-	                   " ('%q', %Q, %Q, %Q, %Q, %lld);",
-	                   name, path, artist, artist, genre, album_art);
-	if( ret != SQLITE_OK )
-		ret = 0;
-	else
-		ret = sqlite3_last_insert_rowid(db2);
-
-	return ret;
-}
-#endif
 int64_t
 GetAudioMetadata(const char *path, char *name)
 {
-#ifdef NAS
-	int dir_count=0,num=0;
-	char full_dir[64];
-	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s\n",full_dir);
-	while(full_dir[num] != '\0')
-	{
-		if(dir_count > 11){
-
-			return 0;
-		}
-
-		if('/'== full_dir[num]){
-			dir_count++;
-		}
-		num++;
-	}
-#endif
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
 	snprintf(full_name,sizeof(full_name),"%s",name);
@@ -534,11 +498,11 @@ GetAudioMetadata(const char *path, char *name)
 	album_art = find_album_art(path, song.image, song.image_size);
 
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, SIZE,TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
+	                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
 	                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
 	                   "VALUES"
-	                   " (%Q, %lld,%Q, %ld,%ld,'%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
-	                   path, (long long)file.st_size,"audio",file.st_mtime,file.st_ctime, m.duration, song.channels, song.bitrate, song.samplerate, m.date,
+	                   " (%Q, %lld, %ld,'%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
+	                   path, (long long)file.st_size, file.st_mtime, m.duration, song.channels, song.bitrate, song.samplerate, m.date,
 	                   full_name, m.creator, m.artist, m.album, m.genre, m.comment, song.disc, song.track,
 	                   m.dlna_pn, song.mime?song.mime:m.mime, album_art);
 #else
@@ -666,24 +630,6 @@ libjpeg_error_handler(j_common_ptr cinfo)
 int64_t
 GetImageMetadata(const char *path, char *name)
 {
-#ifdef NAS
-	int dir_count=0,num=0;
-	char full_dir[64];
-	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s\n",full_dir);
-	while(full_dir[num] != '\0')
-	{
-		if(dir_count > 11){
-
-			return 0;
-		}
-
-		if('/'== full_dir[num]){
-			dir_count++;
-		}
-		num++;
-	}
-#endif
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
 	snprintf(full_name,sizeof(full_name),"%s",name);
@@ -839,11 +785,11 @@ no_exifdata:
 	xasprintf(&m.resolution, "%dx%d", width, height);
 #ifdef BAIDU_DMS_OPT
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, TITLE, SIZE, TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DATE, RESOLUTION,"
+	                   " (PATH, TITLE, SIZE, TYPE,TIMESTAMP, DATE, RESOLUTION,"
 	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld,%Q ,%ld,%ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
-	                   path, full_name, (long long)file.st_size,"image",file.st_mtime,file.st_ctime ,m.date, m.resolution,
+	                   " (%Q, '%q', %lld,%Q ,%ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+	                   path, full_name, (long long)file.st_size,"image", file.st_mtime, m.date, m.resolution,
                     m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
 #else
 	ret = sql_exec(db, "INSERT into DETAILS"
@@ -961,11 +907,11 @@ no_exifdata:
 
 
 		ret = sql_exec(db, "INSERT into DETAILS"
-		                   " (PATH, TITLE, SIZE,TYPE, TIMESTAMP_mtime,TIMESTAMP_ctime, DATE, RESOLUTION,"
+		                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
 		                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 		                   "VALUES"
-		                   " (%Q, '%q', %lld,%Q, %ld,%ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
-		                   path, full_name, (long long)file.st_size,"image",file.st_mtime,file.st_ctime,NULL, "10x10",
+		                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+		                   path, full_name, (long long)file.st_size, file.st_mtime ,NULL, "10x10",
 		                   NULL, 0, NULL,NULL, m.mime);
 	}
 #endif
@@ -987,25 +933,6 @@ no_exifdata:
 int64_t
 GetVideoMetadata(const char *path, char *name)
 {
-#ifdef NAS
-	int dir_count=0,num=0;
-	char full_dir[64];
-	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s\n",full_dir);
-	while(full_dir[num] != '\0')
-	{
-		if(dir_count > 11){
-
-			return 0;
-		}
-
-		if('/'== full_dir[num]){
-			dir_count++;
-		}
-		num++;
-	}
-#endif
-
 #ifdef BAIDU_NO_STRIP_VIDEO
 #ifdef BAIDU_DMS_OPT
 	char full_name[64];
@@ -2148,11 +2075,11 @@ video_no_dlna:
 		}
 	}
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, SIZE, TYPE,TIMESTAMP_mtime,TIMESTAMP_ctime, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
+	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
 	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART) "
 	                   "VALUES"
-	                   " (%Q, %lld,%Q,%ld, %ld, %Q, %Q, %Q, %Q, %Q, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
-	                   path, (long long)file.st_size,"video" ,file.st_mtime,file.st_ctime,NULL,
+	                   " (%Q, %lld, %ld, %Q, %Q, %Q, %Q, %Q, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
+	                   path, (long long)file.st_size, file.st_mtime, NULL,
 	                   NULL,  NULL, NULL, NULL, NULL,
 			   full_name, NULL, NULL, NULL, NULL, NULL,
                            m.mime, album_art);
@@ -2175,234 +2102,6 @@ video_no_dlna:
 
 #ifdef NAS
 int64_t
-GetTextMetadata(const char *path, char *name)
-{
-	int dir_count=0,i=0;
-	char full_dir[64];
-	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s\n",full_dir);
-	while(full_dir[i] != '\0')
-	{
-		if(dir_count > 11){
-
-			return 0;
-		}
-
-		if('/'== full_dir[i]){
-			dir_count++;
-		}
-		i++;
-	}
-	struct stat file;
-	int64_t	    ret;
-	metadata_t m;
-	uint32_t free_flags = 0xFFFFFFFF;
-	memset(&m, '\0', sizeof(metadata_t));
-
-	if ( stat(path, &file) != 0 )
-		return 0;
-	//strip_ext(name);
-	if( ends_with(path, ".txt") )
-	{
-		m.mime = strdup("text/plain");
-	}
-	else if(ends_with(path, ".pdf") )
-	{
-		m.mime = strdup("application/pdf");
-	}
-	else if( ends_with(path, ".umd") )
-	{
-		m.mime = strdup("application/umd");
-	}
-	else if( ends_with(path, ".epub") )
-	{
-		m.mime = strdup("application/epub+zip");
-	}
-	else if(ends_with(path, ".doc") )
-	{
-		m.mime = strdup("application/msword");
-	}
-	else if( ends_with(path, ".xls") )
-	{
-		m.mime = strdup("application/vnd.ms-excel");
-	}
-	else if( ends_with(path, ".ppt") )
-	{
-		m.mime = strdup("application/vnd.ms-powerpoint");
-	}
-	else if(ends_with(path, ".docx") )
-	{
-		m.mime = strdup("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-	}
-	else if( ends_with(path, ".xlsx") )
-	{
-		m.mime = strdup("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-	}
-	else if( ends_with(path, ".pptx") )
-	{
-		m.mime = strdup("application/vnd.openxmlformats-officedocument.presentationml.presentation");
-	}
-	else if( ends_with(path, ".chm") )
-	{
-		m.mime = strdup("application/mshelp");
-	}
-	else if(ends_with(path, ".html") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".dot") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".dotx") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".odm") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".ots") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".ods") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".odt") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".rtf") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".xlt") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".xltx") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".csv") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".pps") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".ppsx") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else if(ends_with(path, ".potx") )
-	{
-		m.mime = strdup("text/html");
-	}
-	else
-	{
-		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
-		return 0;
-	}
-	ret = sql_exec(db2, "INSERT into Nas"
-	                   " (PATH, TITLE, SIZE,TYPE, TIMESTAMP_mtime, TIMESTAMP_ctime,MIME) "
-	                   "VALUES"
-	                   " (%Q, '%q', %lld,%Q, %ld,%ld, %Q);",
-	                   path, name, (long long)file.st_size,"text", file.st_mtime, file.st_ctime,m.mime);
-	if( ret != SQLITE_OK )
-	{
-		fprintf(stderr, "Error inserting details for '%s'!\n", path);
-		ret = 0;
-	}
-	else
-	{
-		ret = sqlite3_last_insert_rowid(db2);
-	}
-	free_metadata(&m, free_flags);
-
-	return ret;
-}
-int64_t
-GetAppMetadata(const char *path, char *name)
-{
-	struct stat file;
-	int64_t	  ret;
-	metadata_t m;
-	uint32_t free_flags = 0xFFFFFFFF;
-	memset(&m, '\0', sizeof(metadata_t));
-	int dir_count=0,num=0;
-	char full_dir[64];
-	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s\n",full_dir);
-	while(full_dir[num] != '\0')
-	{
-		if(dir_count > 11){
-
-			return 0;
-		}
-
-		if('/'== full_dir[num]){
-			dir_count++;
-		}
-		num++;
-	}
-
-	if ( stat(path, &file) != 0 )
-		return 0;
-	//strip_ext(name);
-
-	if( ends_with(path, ".apk") )
-	{
-		m.mime = strdup("application/vnd.android.package-archive");
-	}
-	else if(ends_with(path, ".exe") )
-	{
-		m.mime = strdup("application/octet-stream");
-	}
-	else if( ends_with(path, ".msi") )
-	{
-		m.mime = strdup("application/octet-stream");
-	}
-	else if( ends_with(path, ".deb") )
-	{
-		m.mime = strdup("application/x-debian-package-archive");
-	}
-	else if( ends_with(path, ".ipa") )
-	{
-		m.mime = strdup("application/iphone-package-archive");
-	}
-	else if( ends_with(path, ".px") )
-	{
-		m.mime = strdup("application/x-ipix");
-	}
-	else
-	{
-		DPRINTF(E_WARN, L_GENERAL, "Unhandled file extension on %s\n", path);
-		return 0;
-	}
-	ret = sql_exec(db2, "INSERT into Nas"
-	                   " (PATH, TITLE, SIZE,TYPE, TIMESTAMP_mtime,TIMESTAMP_ctime, MIME) "
-	                   "VALUES"
-	                   " (%Q, '%q', %lld, %Q,%ld, %ld,%Q);",
-	                   path, name, (long long)file.st_size,"app", file.st_mtime,file.st_ctime,m.mime);
-	if( ret != SQLITE_OK )
-	{
-		fprintf(stderr, "Error inserting details for '%s'!\n", path);
-		ret = 0;
-	}
-	else
-	{
-		ret = sqlite3_last_insert_rowid(db2);
-	}
-	free_metadata(&m, free_flags);
-
-	return ret;
-}
-
-int64_t
 GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 {
 	struct stat file;
@@ -2412,11 +2111,11 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	char full_dir[64];
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
 	printf("full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
-	//if((time(NULL) - share->flag_daemon) < 15){
+	if((time(NULL) - share->flag_daemon) < 15){
 		if(NULL == strstr(path, "newifi")){
 			return 0;
 		}
-	//}
+	}
 	if(strrchr(name, '~'))
 	{
 		return 0;

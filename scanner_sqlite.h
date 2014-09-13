@@ -35,13 +35,7 @@ char create_detailTable_sqlite[] = "CREATE TABLE DETAILS ("
 					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
 					"PATH TEXT DEFAULT NULL, "
 					"SIZE INTEGER, "
-#ifdef NAS
-					"TYPE TEXT, "
-					"TIMESTAMP_mtime INTEGER, "
-					"TIMESTAMP_ctime INTEGER, "
-#else
 					"TIMESTAMP INTEGER, "
-#endif
 					"TITLE TEXT COLLATE NOCASE, "
 					"DURATION TEXT, "
 					"BITRATE INTEGER, "

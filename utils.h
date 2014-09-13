@@ -27,7 +27,7 @@
 #include "minidlnatypes.h"
 
 #ifdef NAS
-#define NETWORK_INTERFACE "eth0"
+#define NETWORK_INTERFACE "br0"
 void get_local_ip(char *interface, char *result, int n_result);
 #endif
 
@@ -62,7 +62,7 @@ int resolve_unknown_type(const char * path, media_types dir_type);
 const char *mime_to_ext(const char * mime);
 #ifdef BAIDU_DMS_OPT
 char *title_to_ext(const char * title);
-int dir_depth(char *path);
+int get_dir_depth(char *path);
 #endif
 /* Others */
 int make_dir(char * path, mode_t mode);

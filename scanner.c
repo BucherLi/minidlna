@@ -599,7 +599,6 @@ CreateOptionDatabase(OPTION option)
 
 	if( ret != SQLITE_OK )
 		goto sql_failed;
-	//sql_exec(db, "create INDEX IDX_Nas_option_ID ON nasoption(ID);");
 sql_failed:
 	if( ret != SQLITE_OK )
 		fprintf(stderr, "Error creating SQLite3 table!\n");
@@ -862,10 +861,10 @@ ScanDirectory(const char *dir, const char *parent, media_types dir_types)
 			type = resolve_unknown_type(full_path, dir_types);
 		}
 #ifdef BAIDU_DMS_OPT
-		int ret_depth = 0;
-		ret_depth = dir_depth(full_path);
-		DPRINTF(E_DEBUG, L_SCANNER, _("[%s]full_path depth:%d\n"),full_path,ret_depth);
-		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) && (ret_depth < 5) )
+		int dir_depth = 0;
+		dir_depth = get_dir_depth(full_path);
+		DPRINTF(E_DEBUG, L_SCANNER, _("[%s]full_path depth:%d\n"),full_path,dir_depth);
+		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) && (dir_depth < MAX_DIR_DEPTH) )
 #else
 		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) )
 #endif

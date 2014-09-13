@@ -58,7 +58,7 @@
 #include <sqlite3.h>
 #define MINIDLNA_VERSION "1.1.2"
 #ifdef BAIDU_DMS_OPT
-#define MINIDLNA_BAIDU "V0.1.0.20140709"
+#define MINIDLNA_BAIDU "V2.1.0.201409013"
 #endif
 #ifdef NETGEAR
 # define SERVER_NAME "ReadyDLNA"
@@ -185,6 +185,7 @@
 extern time_t startup_time;
 
 #ifdef NAS
+#define MAX_DIR_DEPTH 7
 extern int nas_timestamp;
 
 typedef

@@ -1201,8 +1201,12 @@ main(int argc, char **argv)
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
 	nas_shm_init();
-	//get_nas_scan_path(scan_path);
-
+	get_nas_scan_path(scan_path);
+	if (access(scan_path, F_OK) != 0)
+	{
+		DPRINTF(E_INFO, L_GENERAL, "Create nas scan directory\n");
+	}
+/*
 	nas_li = time(NULL)-share->flag_daemon;
 	if((time(NULL) - share->flag_daemon) > 15)
 	{
@@ -1212,6 +1216,8 @@ main(int argc, char **argv)
 	{
 		snprintf(scan_path , PATH_MAX, "%s", share->nas_share_path);
 	}
+	*/
+	DPRINTF(E_INFO, L_GENERAL, "[main]scan_path :%s\n", scan_path);
 	ret = open_add_db(NULL);
 	if(ret !=0 )
 	{

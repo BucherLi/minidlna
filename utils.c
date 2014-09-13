@@ -43,22 +43,6 @@
 #include <string.h>
 #endif
 
-void get_local_ip(char *interface, char *result, int n_result)
-{
-    int fd;
-    struct ifreq ifr;
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    /* I want to get an IPv4 IP address */
-    ifr.ifr_addr.sa_family = AF_INET;
-    /* I want IP address attached to specified interface */
-    strncpy(ifr.ifr_name, interface, IFNAMSIZ-1);
-    ioctl(fd, SIOCGIFADDR, &ifr);
-    close(fd);
-    snprintf(result, n_result, "%s",
-        inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-     printf("Got local ip:  %s",  result);
-}
-
 inline int
 strcatf(struct string_s *str, const char *fmt, ...)
 {
@@ -286,6 +270,22 @@ strip_ext(char * name)
 }
 #ifdef NAS
 void
+get_local_ip(char *interface, char *result, int n_result)
+{
+    int fd;
+    struct ifreq ifr;
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    /* I want to get an IPv4 IP address */
+    ifr.ifr_addr.sa_family = AF_INET;
+    /* I want IP address attached to specified interface */
+    strncpy(ifr.ifr_name, interface, IFNAMSIZ-1);
+    ioctl(fd, SIOCGIFADDR, &ifr);
+    close(fd);
+    snprintf(result, n_result, "%s",
+        inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+     printf("Got local ip:  %s",  result);
+}
+void
 fullpathTotitle(const char * name)
 {
 	char * period;
@@ -408,7 +408,7 @@ title_to_ext(const char * title)
 	return period;
 }
 int
-dir_depth(const char *path)
+get_dir_depth(const char *path)
 {
 
 	char depthchar='/';
@@ -424,7 +424,7 @@ void
 get_nas_scan_path(char *newifi_path)
 {
 	char path[PATH_MAX];
-	snprintf(path, 10, "%s", db_path);
+	snprintf(path, 19, "%s", db_path);
 	snprintf(newifi_path, PATH_MAX, "%s/%s", path, "newifi");
 }
 #endif
