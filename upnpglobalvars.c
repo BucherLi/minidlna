@@ -88,6 +88,9 @@ sqlite3 *db,*db2,*add_db,*rm_db,*update_db;
 char friendly_name[FRIENDLYNAME_MAX_LEN];
 char db_path[PATH_MAX] = {'\0'};
 char log_path[PATH_MAX] = {'\0'};
+#ifdef NAS
+char nas_scan_dir[64] = {'\0'};
+#endif
 struct media_dir_s * media_dirs = NULL;
 struct album_art_name_s * album_art_names = NULL;
 short int scanning = 0;

@@ -185,7 +185,8 @@
 extern time_t startup_time;
 
 #ifdef NAS
-#define MAX_DIR_DEPTH 7
+#define MAX_DIR_DEPTH			7
+#define NAS_DOCUMENT_ROOT		"/var/tmp/disk/"
 extern int nas_timestamp;
 
 typedef
@@ -247,6 +248,9 @@ extern sqlite3 *db,*db2,*add_db,*rm_db,*update_db;
 extern char friendly_name[];
 extern char db_path[];
 extern char log_path[];
+#ifdef NAS
+extern char nas_scan_dir[];
+#endif
 extern struct media_dir_s *media_dirs;
 extern struct album_art_name_s *album_art_names;
 extern short int scanning;

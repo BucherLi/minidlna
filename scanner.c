@@ -592,9 +592,6 @@ CreateOptionDatabase(OPTION option)
 	case rm:
 		ret = sql_exec(add_db, create_change_rm_Table_sqlite);
 		break;
-	case change:
-		ret = sql_exec(add_db, create_change_update_Table_sqlite);
-		break;
 	}
 
 	if( ret != SQLITE_OK )

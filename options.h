@@ -57,6 +57,9 @@ enum upnpconfigoptions {
 	ROOT_CONTAINER,			/* root ObjectID (instead of "0") */
 	USER_ACCOUNT,			/* user account to run as */
 	FORCE_SORT_CRITERIA,		/* force sorting by a given sort criteria */
+#ifdef NAS
+	NAS_SCANDIR,			/*the dir for nas.db,eg:/mnt/sda1/newifi*/
+#endif
 	MAX_CONNECTIONS			/* maximum number of simultaneous connections */
 };
 

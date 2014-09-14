@@ -63,6 +63,9 @@ static const struct {
 	{ ROOT_CONTAINER, "root_container" },
 	{ USER_ACCOUNT, "user" },
 	{ FORCE_SORT_CRITERIA, "force_sort_criteria" },
+#ifdef NAS
+	{ NAS_SCANDIR, "nas_scan_dir" },
+#endif
 	{ MAX_CONNECTIONS, "max_connections" }
 };
 

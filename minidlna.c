@@ -100,6 +100,7 @@
 #include "tivo_utils.h"
 #ifdef BAIDU_DMS_OPT
 #include "cJSON.h"
+#include "metadata.h"
 #endif
 
 #if SQLITE_VERSION_NUMBER < 3005001
@@ -315,7 +316,7 @@ open_add_db(sqlite3 **sq3)
 	char add_db_path[PATH_MAX];
 	int new_db = 0;
 	int ret;
-	snprintf(add_db_path, sizeof(add_db_path), "%s/add.db", db_path);
+	snprintf(add_db_path, sizeof(add_db_path), "%s/nas.db", db_path);
 	//if(strcmp(share->dlna_db_path,add_db_path) != 0)
 		//snprintf(share->dlna_db_path, sizeof(share->dlna_db_path), "%s", add_db_path);
 	if (access(add_db_path, F_OK) == 0)
@@ -327,7 +328,7 @@ open_add_db(sqlite3 **sq3)
 		if(ret != 0)
 		{
 			share->DiskChangeFlag = 1;
-			remove("./cache/minidlna/add.db");
+			remove("./cache/minidlna/nas.db");
 		}
 		else
 		{
@@ -793,6 +794,11 @@ init(int argc, char **argv)
 				DPRINTF(E_FATAL, L_GENERAL, "Log path not accessible! [%s]\n", path);
 			strncpyt(log_path, path, PATH_MAX);
 			break;
+#ifdef NAS
+		case NAS_SCANDIR:
+			strncpyt(nas_scan_dir, ary_options[i].value, PATH_MAX);
+			break;
+#endif
 		case UPNPLOGLEVEL:
 			log_level = ary_options[i].value;
 			break;
@@ -1108,7 +1114,7 @@ init(int argc, char **argv)
 #ifdef NAS
 	void minidlna_handler()
 	{
-		snprintf(share->dlna_db_path, sizeof(share->dlna_db_path), "%s/%s", db_path, "add.db");
+		snprintf(share->dlna_db_path, sizeof(share->dlna_db_path), "%s/%s", db_path, "nas.db");
 		share->flag_dlna = time(NULL);
 		printf("[minidlna_handler]db_path:%s\n", share->dlna_db_path);
 		printf("minidlna flag_disk_change:%d\n", share->DiskChangeFlag);
@@ -1135,7 +1141,7 @@ init(int argc, char **argv)
 		if(shm == (void*)-1)
 		{
 			fprintf(stderr, "shmat failed\n");
-			exit(EXIT_FAILURE);
+			//exit(EXIT_FAILURE);
 		}
 		//memset(shm, 0, sizeof(struct shared_use_st));
 		printf("Memory attached at %X\n", (int)shm);
@@ -1166,7 +1172,7 @@ main(int argc, char **argv)
 	int max_fd = -1;
 	int last_changecnt = 0;
 #ifdef NAS
-	char scan_path[PATH_MAX];
+	char nas_scan_path[PATH_MAX];
 #endif
 	pid_t scanner_pid = 0;
 	pthread_t inotify_thread = 0;
@@ -1192,7 +1198,7 @@ main(int argc, char **argv)
 
 	DPRINTF(E_WARN, L_GENERAL, "Starting " SERVER_NAME " version " MINIDLNA_VERSION ".\n");
 #ifdef NAS
-	DPRINTF(E_WARN, L_GENERAL, "Starting XDU_NAS " MINIDLNA_BAIDU ".\n");
+	DPRINTF(E_INFO, L_GENERAL, "Starting XDU_NAS " MINIDLNA_BAIDU ".\n");
 #endif
 	if (sqlite3_libversion_number() < 3005001)
 	{
@@ -1201,10 +1207,11 @@ main(int argc, char **argv)
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
 	nas_shm_init();
-	get_nas_scan_path(scan_path);
-	if (access(scan_path, F_OK) != 0)
+	get_nas_scan_path(nas_scan_path);
+	if (access(nas_scan_path, F_OK) != 0)
 	{
-		DPRINTF(E_INFO, L_GENERAL, "Create nas scan directory\n");
+		make_dir(nas_scan_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
+		DPRINTF(E_INFO, L_GENERAL, "Create nas scan path:%s\n",nas_scan_path);
 	}
 /*
 	nas_li = time(NULL)-share->flag_daemon;
@@ -1217,18 +1224,16 @@ main(int argc, char **argv)
 		snprintf(scan_path , PATH_MAX, "%s", share->nas_share_path);
 	}
 	*/
-	DPRINTF(E_INFO, L_GENERAL, "[main]scan_path :%s\n", scan_path);
+	DPRINTF(E_INFO, L_GENERAL, "[main]nas_scan_path :%s,nas_scan_dir:%s\n", nas_scan_path, nas_scan_dir);
 	ret = open_add_db(NULL);
 	if(ret !=0 )
 	{
 		if (CreateDiskDb() != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		CheckDiskInfo(scan_path);
-		if (CreateOptionDatabase(0) != 0)
+		CheckDiskInfo(nas_scan_path);
+		if (CreateOptionDatabase((OPTION)add) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		if (CreateOptionDatabase(1) != 0)
-			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
-		if (CreateOptionDatabase(2) != 0)
+		if (CreateOptionDatabase((OPTION)rm) != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
 	}
 #endif
@@ -1252,7 +1257,7 @@ main(int argc, char **argv)
 	}
 #endif
 #ifdef NAS
-	scan_add_dir(scan_path);
+	scan_add_dir(nas_scan_path);
 #endif
 	smonitor = OpenAndConfMonitorSocket();
 

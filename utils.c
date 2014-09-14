@@ -283,7 +283,7 @@ get_local_ip(char *interface, char *result, int n_result)
     close(fd);
     snprintf(result, n_result, "%s",
         inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-     printf("Got local ip:  %s",  result);
+     DPRINTF(E_INFO, L_GENERAL, "Got local ip: %s\n", result);
 }
 void
 fullpathTotitle(const char * name)
@@ -423,9 +423,12 @@ get_dir_depth(const char *path)
 void
 get_nas_scan_path(char *newifi_path)
 {
+	char buf[PATH_MAX];
 	char path[PATH_MAX];
-	snprintf(path, 19, "%s", db_path);
-	snprintf(newifi_path, PATH_MAX, "%s/%s", path, "newifi");
+	/*"eg:path=/mnt/sda1"*/
+	snprintf(path, strlen(NAS_DOCUMENT_ROOT)+5, "%s", realpath(".", buf));
+	/*eg:newifi=/mnt/sda1/newifi*/
+	snprintf(newifi_path, PATH_MAX, "%s/%s", path, nas_scan_dir);
 }
 #endif
 const char *

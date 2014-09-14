@@ -89,17 +89,6 @@ char create_change_rm_Table_sqlite[] = "CREATE TABLE Nasrm ("
 					"TIMESTAMP INTEGER, "
 					"TITLE TEXT COLLATE NOCASE);";
 
-char create_change_update_Table_sqlite[] = "CREATE TABLE Nasupdate ("
-					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
-					"PATH TEXT DEFAULT NULL, "
-					"SIZE INTEGER, "
-					"OPTION INTEGER, "
-					"TYPE TEXT, "
-					"TIMESTAMP_ctime INTEGER, "
-					"TIMESTAMP_mtime INTEGER, "
-					"TIMESTAMP INTEGER, "
-					"TITLE TEXT COLLATE NOCASE);";
-
 char create_diskinfo_sqlite[] = "CREATE TABLE Nasdiskinfo ("
 					"ID INTEGER PRIMARY KEY AUTOINCREMENT, "
 					"PATH TEXT DEFAULT NULL, "
