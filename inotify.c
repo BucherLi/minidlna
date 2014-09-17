@@ -294,10 +294,10 @@ inotify_insert_file(char * name, const char * path)
 	struct media_dir_s * media_path = media_dirs;
 	struct stat st;
 #ifdef BAIDU_DMS_OPT
-		int ret_depth = 0;
-		ret_depth = dir_depth(path);
-		DPRINTF(E_DEBUG, L_SCANNER, _("[%s]full_path depth:%d\n"), path, ret_depth);
-		if(ret_depth > MAX_DIR)
+		int dir_depth = 0;
+		dir_depth = get_dir_depth(path);
+		DPRINTF(E_DEBUG, L_SCANNER, _("[%s]full_path depth:%d\n"), path, dir_depth);
+		if((dir_depth > MAX_DIR_DEPTH) || (NULL == strstr(path, nas_scan_dir)))
 			return 0;
 #endif
 	/* Is it cover art for another file? */

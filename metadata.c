@@ -2112,7 +2112,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
 	printf("full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
 	if((time(NULL) - share->flag_daemon) < 15){
-		if(NULL == strstr(path, "newifi")){
+		if(NULL == strstr(path, nas_scan_dir)){
 			return 0;
 		}
 	}

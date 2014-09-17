@@ -861,7 +861,7 @@ ScanDirectory(const char *dir, const char *parent, media_types dir_types)
 		int dir_depth = 0;
 		dir_depth = get_dir_depth(full_path);
 		DPRINTF(E_DEBUG, L_SCANNER, _("[%s]full_path depth:%d\n"),full_path,dir_depth);
-		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) && (dir_depth < MAX_DIR_DEPTH) )
+		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) && ((dir_depth < MAX_DIR_DEPTH) || strstr(full_path, nas_scan_dir)) )
 #else
 		if( (type == TYPE_DIR) && (access(full_path, R_OK|X_OK) == 0) )
 #endif
