@@ -785,11 +785,11 @@ no_exifdata:
 	xasprintf(&m.resolution, "%dx%d", width, height);
 #ifdef BAIDU_DMS_OPT
 	ret = sql_exec(db, "INSERT into DETAILS"
-	                   " (PATH, TITLE, SIZE, TYPE,TIMESTAMP, DATE, RESOLUTION,"
+	                   " (PATH, TITLE, SIZE,TIMESTAMP, DATE, RESOLUTION,"
 	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 	                   "VALUES"
-	                   " (%Q, '%q', %lld,%Q ,%ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
-	                   path, full_name, (long long)file.st_size,"image", file.st_mtime, m.date, m.resolution,
+	                   " (%Q, '%q', %lld, %ld, %Q, %Q, %Q, %d, %Q, %Q, %Q);",
+	                   path, full_name, (long long)file.st_size, file.st_mtime, m.date, m.resolution,
                     m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
 #else
 	ret = sql_exec(db, "INSERT into DETAILS"
