@@ -67,6 +67,7 @@
 #include <pthread.h>
 #include <libgen.h>
 #include <pwd.h>
+#include <sys/sem.h>
 #ifdef NAS
 #include <unistd.h>
 #include <signal.h>
@@ -1111,9 +1112,85 @@ init(int argc, char **argv)
 
 	return 0;
 }
+
+int nas_sem_init(void)
+{
+    union semun
+    {
+        int val;
+        unsigned short *array;
+
+    } sem_union;
+
+    key_t key;
+    int nasSemaphore = 0;
+
+    key = ftok("/proc", 0);
+    if (0 > key)
+    {
+        printf("ftok error:%s", strerror(errno));
+        return -1;
+    }
+
+    nasSemaphore = semget(key, 1, 0666 | IPC_CREAT);
+    if (0 > nasSemaphore)
+    {
+    	printf("semget error:%s", strerror(errno));
+        return -1;
+    }
+
+    sem_union.val = 1;
+    if (0 > semctl(nasSemaphore, 0, SETVAL, sem_union))
+    {
+    	printf("semctl error:%s", strerror(errno));
+        return -1;
+    }
+
+    return nasSemaphore;
+
+
+}
+
+int nas_sem_p(int dwSem)
+{
+    int  dwRet = 0;
+    struct sembuf tSemBuf;
+
+    tSemBuf.sem_op = -1;
+    tSemBuf.sem_num = 0;
+    tSemBuf.sem_flg = SEM_UNDO;
+
+    dwRet = semop(dwSem, &tSemBuf, 1);
+    if (0 != dwRet)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+int nas_sem_v(int dwSem)
+{
+    int  dwRet = 0;
+    struct sembuf tSemBuf;
+
+    tSemBuf.sem_op = 1;
+    tSemBuf.sem_num = 0;
+    tSemBuf.sem_flg = SEM_UNDO;
+
+    dwRet = semop(dwSem, &tSemBuf, 1);
+    if (0 != dwRet)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
 #ifdef NAS
 	void minidlna_handler()
 	{
+		nas_sem_p(share->nasSemid);
 		snprintf(share->dlna_db_path, sizeof(share->dlna_db_path), "%s/%s", db_path, "nas.db");
 		share->flag_dlna = time(NULL);
 		printf("[minidlna_handler]db_path:%s\n", share->dlna_db_path);
@@ -1121,6 +1198,7 @@ init(int argc, char **argv)
 		printf("minidlna flag_dlna:%ld\n", share->flag_dlna);
 		printf("minidlna flag_daemon:%ld\n", share->flag_daemon);
 		printf("nas_path:%s\n", share->nas_share_path);
+		nas_sem_v(share->nasSemid);
 		alarm(10);
 	}
 
@@ -1128,26 +1206,29 @@ init(int argc, char **argv)
 	{
 		void *shm = NULL;
 		int shmid;
-		//创建共享内存,如果存在则返回shmid
+		int nasSemaphore = 0;
+
+		/*创建或获取信号量*/
+		nasSemaphore =  nas_sem_init();
+		/*创建共享内存,如果存在则返回shmid*/
 		shmid = shmget((key_t)1234, 2*sizeof(struct shared_use_st), 0666|IPC_CREAT);
 		printf ( "successfully created segment : %d \n", shmid ) ;
 		if(shmid == -1)
 		{
 			fprintf(stderr, "shmget failed\n");
-			//exit(EXIT_FAILURE);
 		}
-		//将共享内存连接到当前进程的地址空间
+		/*将共享内存连接到当前进程的地址空间*/
 		shm = shmat(shmid, (void*)0, 0);
 		if(shm == (void*)-1)
 		{
 			fprintf(stderr, "shmat failed\n");
-			//exit(EXIT_FAILURE);
 		}
 		//memset(shm, 0, sizeof(struct shared_use_st));
 		printf("Memory attached at %X\n", (int)shm);
-		//设置共享内存
+		/*设置共享内存*/
 		share = (struct shared_use_st*)shm;
-		//每10秒向共享内存中写flag
+		share->nasSemid = nasSemaphore;
+		/*每10秒向共享内存中写flag*/
 		printf("[nas_shm_init]:hello word\n");
 		signal(SIGALRM, minidlna_handler);
 		alarm(1);
@@ -1214,6 +1295,7 @@ main(int argc, char **argv)
 		DPRINTF(E_INFO, L_GENERAL, "Create nas scan path:%s\n",nas_scan_path);
 	}
 /*
+	nas_sem_p(share->nasSemid);
 	nas_li = time(NULL)-share->flag_daemon;
 	if((time(NULL) - share->flag_daemon) > 15)
 	{
@@ -1223,7 +1305,8 @@ main(int argc, char **argv)
 	{
 		snprintf(scan_path , PATH_MAX, "%s", share->nas_share_path);
 	}
-	*/
+	nas_sem_v(share->nasSemid);
+*/
 	DPRINTF(E_INFO, L_GENERAL, "[main]nas_scan_path :%s,nas_scan_dir:%s\n", nas_scan_path, nas_scan_dir);
 	ret = open_add_db(NULL);
 	if(ret !=0 )

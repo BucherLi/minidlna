@@ -192,6 +192,7 @@ extern int nas_timestamp;
 typedef
 struct shared_use_st
 {
+	int nasSemid;
 	time_t flag_dlna;//作为一个标志，1表示minidlna未启动
 	time_t flag_daemon;
 	char nas_share_path[256];
