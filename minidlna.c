@@ -1254,6 +1254,7 @@ main(int argc, char **argv)
 	int last_changecnt = 0;
 #ifdef NAS
 	char nas_scan_path[PATH_MAX];
+	int nasret;
 #endif
 	pid_t scanner_pid = 0;
 	pthread_t inotify_thread = 0;
@@ -1308,8 +1309,8 @@ main(int argc, char **argv)
 	nas_sem_v(share->nasSemid);
 */
 	DPRINTF(E_INFO, L_GENERAL, "[main]nas_scan_path :%s,nas_scan_dir:%s\n", nas_scan_path, nas_scan_dir);
-	ret = open_add_db(NULL);
-	if(ret !=0 )
+	nasret = open_add_db(NULL);
+	if(nasret !=0 )
 	{
 		if (CreateDiskDb() != 0)
 			DPRINTF(E_FATAL, L_GENERAL, "ERROR: Failed to create sqlite database!  Exiting...\n");
@@ -1340,7 +1341,8 @@ main(int argc, char **argv)
 	}
 #endif
 #ifdef NAS
-	scan_add_dir(nas_scan_path);
+	if(nasret != 0 )
+		scan_add_dir(nas_scan_path);
 #endif
 	smonitor = OpenAndConfMonitorSocket();
 
