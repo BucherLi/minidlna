@@ -389,10 +389,16 @@ inotify_insert_file(char * name, const char * path)
 		depth = 0;
 		strcpy(path_buf, path);
 		parent_buf = dirname(path_buf);
-
+#ifdef NAS
+		/*磊科的内核中使用dirname不会过滤斜杠【/】*/
+		if('/' == parent_buf[strlen(parent_buf)-1])
+		{
+			strip_for_dirpath(parent_buf);
+		}
+#endif
 		do
 		{
-			//DEBUG DPRINTF(E_DEBUG, L_INOTIFY, "Checking %s\n", parent_buf);
+			DPRINTF(E_DEBUG, L_INOTIFY, "Checking [%s]\n", parent_buf);
 			id = sql_get_text_field(db, "SELECT OBJECT_ID from OBJECTS o left join DETAILS d on (d.ID = o.DETAIL_ID)"
 			                            " where d.PATH = '%q' and REF_ID is NULL", parent_buf);
 			if( id )
@@ -869,14 +875,14 @@ start_inotify()
 								path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "changed"));
 							if((event->mask & IN_MOVED_TO) > 0 )
 							{
-								printf("[notify.c 888]name:%s\n",esc_name);
+								DPRINTF(E_WARN, L_INOTIFY,  "name:%s\n",esc_name);
 								GetAllFile(path_buf, esc_name, 0, 1);
 
 							}
 #ifdef NAS
 							else
 							{
-								printf("[notify.c 895]name:%s\n",esc_name);
+								DPRINTF(E_WARN, L_INOTIFY,  "name:%s\n",esc_name);
 								GetAllFile(path_buf, esc_name, 0, 1);
 							}
 #endif

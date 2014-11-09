@@ -294,6 +294,16 @@ fullpathTotitle(const char * name)
 	if( period )
 		 period++;
 }
+/*过滤文件名末尾斜杠【/】*/
+void
+strip_for_dirpath(char * name)
+{
+	char * period;
+
+	period = strrchr(name, '/');
+	if( period )
+		*period = '\0';
+}
 void
 strip_specia_ext(char * name)
 {

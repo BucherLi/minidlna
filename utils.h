@@ -53,6 +53,7 @@ int is_image(const char * file);
 int is_text(const char * file);
 int is_application(const char * file);
 void strip_specia_ext(char * name);
+void strip_for_dirpath(char * name);
 int64_t CheckDiskInfo(char *path);
 void get_nas_scan_path(char *newfi_path);
 #endif

@@ -2110,7 +2110,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	char file_type[16];
 	char full_dir[64];
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
+	printf("[GetAllFile]full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
 	if((time(NULL) - share->flag_daemon) < 15){
 		if(NULL == strstr(path, nas_scan_dir)){
 			return 0;
@@ -2120,6 +2120,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	{
 		return 0;
 	}
+	/*
 	while(full_dir[num] != '\0')
 	{
 		if(dir_count > 11){
@@ -2132,8 +2133,8 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 		}
 		num++;
 	}
+	*/
 	nas_timestamp++;
-	//mime = getmime(name);
 	if(is_video(name))
 	{
 		snprintf(file_type,sizeof(file_type),"%s","vedio");
