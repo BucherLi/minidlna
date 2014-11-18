@@ -395,15 +395,10 @@
 #define ROOTDEV_MODELDESCRIPTION "MiniDLNA on " OS_NAME
 
 /* Model name */
-#ifdef BAIDU_DMS_OPT
-#define ROOTDEV_MODELNAME 	"Baidu Router"
-#define ROOTDEV_MODELURL	"http://link.baidu.com/"
-#else
 #define ROOTDEV_MODELNAME "Windows Media Connect compatible (MiniDLNA)"
 
 /* Model URL */
 #define ROOTDEV_MODELURL OS_URL
-#endif
 
 /* scandir needs const char cast */
 #define SCANDIR_CONST 1
