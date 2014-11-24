@@ -597,12 +597,11 @@ is_video(const char * file)
 		ends_with(file, ".rm")  || ends_with(file, ".rmvb")  ||
 		ends_with(file, ".mpeg4")  || ends_with(file, ".swf")  ||
 		ends_with(file, ".wmx")  || ends_with(file, ".wm")  ||
-		ends_with(file, ".mpeg")  || ends_with(file, ".mpeg2")  ||
+		ends_with(file, ".xv")  || ends_with(file, ".mpeg2")  ||
 		ends_with(file, ".mpga")  || ends_with(file, ".qt")  ||
 		ends_with(file, ".wmz")  || ends_with(file, ".wmd")  ||
 		ends_with(file, ".wmd")  || ends_with(file, ".f4v")  ||
 		ends_with(file, ".ts")  || ends_with(file, ".wvx")  ||
-		ends_with(file, ".wav")  || ends_with(file, ".xv")  ||
 		ends_with(file, ".vod")  || ends_with(file, ".webm")  ||
 		ends_with(file, ".mts")  || ends_with(file, ".m2ts")  ||
 		ends_with(file, ".3gp2")  || ends_with(file, ".3gpp")  ||

@@ -1289,25 +1289,27 @@ main(int argc, char **argv)
 	LIST_INIT(&upnphttphead);
 #ifdef NAS
 	nas_shm_init();
+	/*
 	get_nas_scan_path(nas_scan_path);
 	if (access(nas_scan_path, F_OK) != 0)
 	{
 		make_dir(nas_scan_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
 		DPRINTF(E_INFO, L_GENERAL, "Create nas scan path:%s\n",nas_scan_path);
 	}
-/*
+	*/
+
 	nas_sem_p(share->nasSemid);
 	nas_li = time(NULL)-share->flag_daemon;
 	if((time(NULL) - share->flag_daemon) > 15)
 	{
-		snprintf(scan_path , PATH_MAX, "%s",media_dirs->path);
+			sleep(3);
 	}
 	else
 	{
-		snprintf(scan_path , PATH_MAX, "%s", share->nas_share_path);
+		snprintf(nas_scan_path , PATH_MAX, "%s", share->nas_share_path);
 	}
 	nas_sem_v(share->nasSemid);
-*/
+
 	DPRINTF(E_INFO, L_GENERAL, "[main]nas_scan_path :%s,nas_scan_dir:%s\n", nas_scan_path, nas_scan_dir);
 	nasret = open_add_db(NULL);
 	if(nasret !=0 )
