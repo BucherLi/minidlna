@@ -311,8 +311,6 @@ nas_get_dirname(const char *fullname)
 	char * period;
 	char * name = NULL;
 	name = strdup(fullname);
-	DPRINTF(E_DEBUG, L_GENERAL, " last word: [%c]\n",  name[strlen(name)-1]);
-
 	while('/' == name[strlen(name)-1])
 	{
 		period = strrchr(name, '/');
@@ -321,7 +319,7 @@ nas_get_dirname(const char *fullname)
 	}
 	strip_for_dirpath(name);
 
-	DPRINTF(E_DEBUG, L_GENERAL, " first word: [%c]\n",  name[0]);
+	//DPRINTF(E_DEBUG, L_GENERAL, " first word: [%c]\n",  name[0]);
     if('\0' == name[0])
     {
     	name[0] = '/';
