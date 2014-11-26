@@ -304,6 +304,31 @@ strip_for_dirpath(char * name)
 	if( period )
 		*period = '\0';
 }
+
+char *
+nas_get_dirname(const char *fullname)
+{
+	char * period;
+	char * name = NULL;
+	name = strdup(fullname);
+	DPRINTF(E_DEBUG, L_GENERAL, " last word: [%c]\n",  name[strlen(name)-1]);
+
+	while('/' == name[strlen(name)-1])
+	{
+		period = strrchr(name, '/');
+		if( period )
+			*period = '\0';
+	}
+	strip_for_dirpath(name);
+
+	DPRINTF(E_DEBUG, L_GENERAL, " first word: [%c]\n",  name[0]);
+    if('\0' == name[0])
+    {
+    	name[0] = '/';
+    }
+    return name;
+}
+
 void
 strip_specia_ext(char * name)
 {

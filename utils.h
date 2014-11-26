@@ -56,6 +56,7 @@ void strip_specia_ext(char * name);
 void strip_for_dirpath(char * name);
 int64_t CheckDiskInfo(char *path);
 void get_nas_scan_path(char *newfi_path);
+char * nas_get_dirname(char * name);
 #endif
 int is_playlist(const char * file);
 int is_album_art(const char * name);

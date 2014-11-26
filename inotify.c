@@ -388,14 +388,14 @@ inotify_insert_file(char * name, const char * path)
 	{
 		depth = 0;
 		strcpy(path_buf, path);
-		parent_buf = dirname(path_buf);
+		DPRINTF(E_DEBUG, L_INOTIFY, " befor dirname: [%s]\n",  path_buf);
 #ifdef NAS
-		/*磊科的内核中使用dirname不会过滤斜杠【/】*/
-		if('/' == parent_buf[strlen(parent_buf)-1])
-		{
-			strip_for_dirpath(parent_buf);
-		}
+		parent_buf = nas_get_dirname(path_buf);
+#else
+		parent_buf = dirname(path_buf);
 #endif
+		DPRINTF(E_DEBUG, L_INOTIFY, " after dirname: [%s]\n",  parent_buf);
+
 		do
 		{
 			DPRINTF(E_DEBUG, L_INOTIFY, "Checking [%s]\n", parent_buf);
@@ -415,7 +415,11 @@ inotify_insert_file(char * name, const char * path)
 			}
 			depth++;
 			strcpy(last_dir, parent_buf);
-			parent_buf = dirname(parent_buf);
+#ifdef NAS
+		   parent_buf = nas_get_dirname(path_buf);
+#else
+		   parent_buf = dirname(parent_buf);
+#endif
 		}
 		while( strcmp(parent_buf, "/") != 0 );
 
@@ -430,6 +434,9 @@ inotify_insert_file(char * name, const char * path)
 	free(last_dir);
 	free(path_buf);
 	free(base_name);
+#ifdef NAS
+	free(parent_buf);
+#endif
 
 	if( !depth )
 	{
