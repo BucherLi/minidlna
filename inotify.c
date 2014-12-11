@@ -89,7 +89,7 @@ add_watch(int fd, const char * path)
 	wd = inotify_add_watch(fd, path, IN_CREATE|IN_CLOSE_WRITE|IN_DELETE|IN_MOVE);
 	if( wd < 0 )
 	{
-		DPRINTF(E_ERROR, L_INOTIFY, "inotify_add_watch(%s) [%s]\n", path, strerror(errno));
+		DPRINTF(E_INFO, L_INOTIFY, "inotify_add_watch(%s) [%s]\n", path, strerror(errno));
 		return -1;
 	}
 

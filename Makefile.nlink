@@ -188,11 +188,11 @@ AUTOHEADER = ${SHELL} /home/tiansm/minidlna/missing --run autoheader
 AUTOMAKE = ${SHELL} /home/tiansm/minidlna/missing --run automake-1.11
 AWK = gawk
 CC = mipsel-unknown-linux-uclibc-gcc
-LD_LIBRARY_PATH = /opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib
+LD_LIBRARY_PATH = /opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2 -DBAIDU_DMS_OPT -DNAS 
 CPP = mipsel-unknown-linux-uclibc-gcc -E
-CPPFLAGS = -I/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/include -I/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/include -I/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/include
+CPPFLAGS = -I/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/include -I/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/include -I/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/include
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H 
 DEPDIR = .deps
@@ -210,22 +210,22 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
-INTLLIBS = /opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib/libintl.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib
+INTLLIBS = /opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib/libintl.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib
 INTL_MACOSX_LIBS = 
-LDFLAGS = -L/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib
+LDFLAGS = -L/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib -L/opt/nossdk_mips32_1.3.8/lib
 LIBAVFORMAT_LIBS = -lavformat
 LIBAVUTIL_LIBS = -lavutil
 LIBEXIF_LIBS = -lexif
-LIBICONV = /opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib/libiconv.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib
+LIBICONV = /opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib/libiconv.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib
 LIBID3TAG_LIBS = -lid3tag
-LIBINTL = /opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib/libintl.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib
+LIBINTL = /opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib/libintl.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib
 LIBJPEG_LIBS = -ljpeg
 LIBOBJS =  ${LIBOBJDIR}lstat$U.o
 LIBS = -lpthread -lm 
 LIBSQLITE3_LIBS = -lsqlite3
 LN_S = ln -s
-LTLIBICONV = -L/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib -liconv -R/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib
-LTLIBINTL = -L/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib -lintl -R/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib
+LTLIBICONV = -L/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib -liconv -R/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib
+LTLIBINTL = -L/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib -lintl -R/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib
 LTLIBOBJS =  ${LIBOBJDIR}lstat$U.lo
 MAKEINFO = ${SHELL} /home/tiansm/minidlna/missing --run makeinfo
 MKDIR_P = /bin/mkdir -p
@@ -336,8 +336,8 @@ minidlnad_LDADD = \
 	-lavutil \
 	-lexif \
 	-lnorouter\
-	/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib/libintl.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib \
-	/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib/libiconv.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140617_V1.6.4.7/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib \
+	/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib/libintl.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libintl-full/lib \
+	/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib/libiconv.so -Wl,-rpath -Wl,/opt/RYOS_SDK_Build20140504_V1.6.2.2/staging_dir/target-mipsel_r2_uClibc-0.9.33.2/usr/lib/libiconv-full/lib \
 	-lFLAC  $(flacoggflag) $(vorbisflag)
 
 minidlnad_LDFLAGS = 

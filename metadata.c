@@ -2110,7 +2110,7 @@ GetAllFile(const char *path, const char *name, OPTION option, NAS_DIR dir)
 	char file_type[16];
 	char full_dir[64];
 	snprintf(full_dir,sizeof(full_dir),"%s",path);
-	printf("[GetAllFile]full_dir:%s,%s,%d\n",full_dir,name,nas_timestamp);
+	DPRINTF(E_DEBUG, L_GENERAL,"full_dir:%s,%s,%d\n", full_dir, name, nas_timestamp);
 	if((time(NULL) - share->flag_daemon) < 15){
 		if(NULL == strstr(path, nas_scan_dir)){
 			return 0;
